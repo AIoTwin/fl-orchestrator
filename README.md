@@ -4,7 +4,7 @@
 
 Install Go version 1.20 or higher (https://go.dev/doc/install).
 
-# Usage
+## Usage
 
 ```bash
 cd cmd/main
