@@ -1,0 +1,25 @@
+server_type: 'TorchServerWithCentralizedEval'
+device: 'cpu'
+#num_children: &total_clients
+
+strategy_config:
+strategy_type: "FedAvg"
+#  min_available_clients: 4 #clients used during training
+#  min_fit_clients: 4 #min clients during validation
+#  min_evaluate_clients: 4 #min clients in the system
+
+central_test_config:
+central_eval_metrics: [ 'Accuracy' ]
+central_main_metric: 'Accuracy'
+central_log_freq: 100
+central_dataset_id: 'cifar10/test'
+central_loader_params:
+  batch_size: 128
+  num_workers: 0
+  shuffle: False
+  pin_memory: True
+
+# logging config, model_config
+config: ['../example_global_server/logging_config.yaml',
+         '../example_global_server/model_config.yaml',
+         '../example_global_server/datasets_config.yaml']

@@ -1,0 +1,8 @@
+wandb_config:
+project: 'example_project'
+entity: 'aiotwin-wandb'
+run_name: 'example_run'
+enabled: False
+local_logging_config:
+log_file_path: 'logs/example/example.log'
+scalar_freq: 100

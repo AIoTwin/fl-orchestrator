@@ -1,0 +1,251 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clientcm-1
+data:
+  client_config.yaml: |-
+    device: cpu
+
+    client_id: '1'
+    client_type: TorchClient
+
+    trainer_config:
+    train_config:
+    server_address: 'fl-ga-service:5000'
+    train_dataset_id: 'cifar10/train'
+    epochs: 2
+    train_loader_params:
+      batch_size: 64
+      num_workers: 0
+      shuffle: True
+      pin_memory: True
+    optimizer:
+      type: 'adam'
+      params:
+        lr: 0.001
+    #    momentum: 0.9
+    #    weight_decay: 0.0001
+    criterion:
+      type: 'CrossEntropyLoss'
+      params:
+        reduction: 'mean'
+
+    validation_config:
+    main_metric: 'Accuracy'
+    eval_metrics: [ 'Accuracy' ]
+    eval_dataset_id: 'cifar10/val'
+    eval_loader_params:
+      batch_size: 128
+      num_workers: 0
+      shuffle: False
+      pin_memory: True
+
+
+    config: [ '../example_client/logging_config.yaml',
+              '../example_client/model_config.yaml',
+              '../example_client/datasets_config.yaml' ]
+  datasets_config.yaml: |-
+    train_splits: 64
+    params:
+      cifar10:
+        name: &dataset_name 'cifar10'
+        type: 'CIFAR10'
+        #    root: &root_dir !join ['./resource/dataset/', *dataset_name]
+        root: &root_dir './resources/dataset/cifar10'
+        splits:
+          train:
+            #        dataset_id: &cifar10_train !join [*dataset_name, '/train']
+            dataset_id: &cifar10_train 'cifar10/train'
+            params:
+              root: *root_dir
+              train: True
+              download: True
+              transform_params:
+                - type: 'RandomHorizontalFlip'
+                  params:
+                    p: 0.5
+                - type: 'ToTensor'
+                  params:
+                - &normalize
+                  type: 'Normalize'
+                  params:
+                    mean: [ 0.49139968, 0.48215841, 0.44653091 ]
+                    std: [ 0.24703223, 0.24348513, 0.26158784 ]
+    #            - &resize
+    #              type: 'WrappedResize'
+    #              params:
+    #                size: &input_size [224, 224]
+    #                interpolation: 'bicubic'
+    #                antialias: True
+          val:
+            #        dataset_id: &cifar10_val !join [*dataset_name, '/val']
+            dataset_id: &cifar10_val 'cifar10/val'
+            params:
+              root: *root_dir
+              train: False
+              download: True
+              transform_params: &val_transform
+                - type: 'ToTensor'
+                  params:
+                - *normalize
+    #            - *resize
+          test:
+            #        dataset_id: &cifar10_test !join [*dataset_name, '/test']
+            dataset_id: &cifar10_test 'cifar10/test'
+            params:
+              root: *root_dir
+              train: False
+              download: True
+              transform_params: *val_transform
+  entry_client.yaml: |-
+    subset_strategy: "flat_fair"
+    train_split: 64
+    config: [ '../example_client/datasets_config.yaml',
+              '../example_client/logging_config.yaml' ]
+  logging_config.yaml: |-
+    wandb_config:
+    project: 'example_project'
+    entity: 'aiotwin-wandb'
+    run_name: 'example_run'
+    enabled: False
+    local_logging_config:
+    log_file_path: 'logs/example/example.log'
+    scalar_freq: 100
+  model_config.yaml: |-
+    # uncomment below for pre-built model
+    #zoo_or_custom_model_name: 'get_torch_image_model'
+    #model_args:
+    #  name: 'mobilenetv2_050'
+    #  params:
+    #    pretrained: False
+    #    num_classes: 10
+
+    zoo_or_custom_model_name: 'NaiveNet'
+    model_args:
+      num_classes: 10
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clientcm-2
+data:
+  client_config.yaml: |-
+    device: cpu
+
+    client_id: '2'
+    client_type: TorchClient
+
+    trainer_config:
+    train_config:
+    server_address: 'fl-ga-service:5000'
+    train_dataset_id: 'cifar10/train'
+    epochs: 2
+    train_loader_params:
+      batch_size: 64
+      num_workers: 0
+      shuffle: True
+      pin_memory: True
+    optimizer:
+      type: 'adam'
+      params:
+        lr: 0.001
+    #    momentum: 0.9
+    #    weight_decay: 0.0001
+    criterion:
+      type: 'CrossEntropyLoss'
+      params:
+        reduction: 'mean'
+
+    validation_config:
+    main_metric: 'Accuracy'
+    eval_metrics: [ 'Accuracy' ]
+    eval_dataset_id: 'cifar10/val'
+    eval_loader_params:
+      batch_size: 128
+      num_workers: 0
+      shuffle: False
+      pin_memory: True
+
+
+    config: [ '../example_client/logging_config.yaml',
+              '../example_client/model_config.yaml',
+              '../example_client/datasets_config.yaml' ]
+  datasets_config.yaml: |-
+    train_splits: 64
+    params:
+      cifar10:
+        name: &dataset_name 'cifar10'
+        type: 'CIFAR10'
+        #    root: &root_dir !join ['./resource/dataset/', *dataset_name]
+        root: &root_dir './resources/dataset/cifar10'
+        splits:
+          train:
+            #        dataset_id: &cifar10_train !join [*dataset_name, '/train']
+            dataset_id: &cifar10_train 'cifar10/train'
+            params:
+              root: *root_dir
+              train: True
+              download: True
+              transform_params:
+                - type: 'RandomHorizontalFlip'
+                  params:
+                    p: 0.5
+                - type: 'ToTensor'
+                  params:
+                - &normalize
+                  type: 'Normalize'
+                  params:
+                    mean: [ 0.49139968, 0.48215841, 0.44653091 ]
+                    std: [ 0.24703223, 0.24348513, 0.26158784 ]
+    #            - &resize
+    #              type: 'WrappedResize'
+    #              params:
+    #                size: &input_size [224, 224]
+    #                interpolation: 'bicubic'
+    #                antialias: True
+          val:
+            #        dataset_id: &cifar10_val !join [*dataset_name, '/val']
+            dataset_id: &cifar10_val 'cifar10/val'
+            params:
+              root: *root_dir
+              train: False
+              download: True
+              transform_params: &val_transform
+                - type: 'ToTensor'
+                  params:
+                - *normalize
+    #            - *resize
+          test:
+            #        dataset_id: &cifar10_test !join [*dataset_name, '/test']
+            dataset_id: &cifar10_test 'cifar10/test'
+            params:
+              root: *root_dir
+              train: False
+              download: True
+              transform_params: *val_transform
+  entry_client.yaml: |-
+    subset_strategy: "flat_fair"
+    train_split: 64
+    config: [ '../example_client/datasets_config.yaml',
+              '../example_client/logging_config.yaml' ]
+  logging_config.yaml: |-
+    wandb_config:
+    project: 'example_project'
+    entity: 'aiotwin-wandb'
+    run_name: 'example_run'
+    enabled: False
+    local_logging_config:
+    log_file_path: 'logs/example/example.log'
+    scalar_freq: 100
+  model_config.yaml: |-
+    # uncomment below for pre-built model
+    #zoo_or_custom_model_name: 'get_torch_image_model'
+    #model_args:
+    #  name: 'mobilenetv2_050'
+    #  params:
+    #    pretrained: False
+    #    num_classes: 10
+
+    zoo_or_custom_model_name: 'NaiveNet'
+    model_args:
+      num_classes: 10

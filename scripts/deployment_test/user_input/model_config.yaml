@@ -1,0 +1,11 @@
+# uncomment below for pre-built model
+#zoo_or_custom_model_name: 'get_torch_image_model'
+#model_args:
+#  name: 'mobilenetv2_050'
+#  params:
+#    pretrained: False
+#    num_classes: 10
+
+zoo_or_custom_model_name: 'NaiveNet'
+model_args:
+  num_classes: 10

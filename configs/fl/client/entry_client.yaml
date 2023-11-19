@@ -1,0 +1,4 @@
+subset_strategy: "flat_fair"
+train_split: 64
+config: [ '../example_client/datasets_config.yaml',
+          '../example_client/logging_config.yaml' ]

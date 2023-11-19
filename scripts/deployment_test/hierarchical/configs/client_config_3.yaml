@@ -1,0 +1,40 @@
+device: 'cpu'
+
+client_id: '3'
+client_type: 'TorchClient'
+
+trainer_config:
+train_config:
+server_address: 'fl-ls-service2:5000'
+train_dataset_id: 'cifar10/train'
+epochs: 2
+train_loader_params:
+  batch_size: 64
+  num_workers: 0
+  shuffle: True
+  pin_memory: True
+optimizer:
+  type: 'adam'
+  params:
+    lr: 0.001
+#    momentum: 0.9
+#    weight_decay: 0.0001
+criterion:
+  type: 'CrossEntropyLoss'
+  params:
+    reduction: 'mean'
+
+validation_config:
+main_metric: 'Accuracy'
+eval_metrics: [ 'Accuracy' ]
+eval_dataset_id: 'cifar10/val'
+eval_loader_params:
+  batch_size: 128
+  num_workers: 0
+  shuffle: False
+  pin_memory: True
+
+
+config: [ '../example_client/logging_config.yaml',
+          '../example_client/model_config.yaml',
+          '../example_client/datasets_config.yaml' ]

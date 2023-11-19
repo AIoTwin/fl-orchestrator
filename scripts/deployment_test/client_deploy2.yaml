@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fl-cl-depl2
+  labels:
+    app: fl-cl2
+spec:
+  selector:
+    matchLabels:
+      app: fl-cl2
+  template:
+    metadata:
+      labels:
+        app: fl-cl2
+    spec:
+      containers:
+      - name: fl-cl2
+        image: cilicivan96/aiotwin-fl-client:1.0
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - mountPath: /app/config/example_client/client_config.yaml
+          name: configyaml2
+      volumes:
+      - name: configyaml2
+        hostPath: 
+          path: /home/ivan/aiotwin/software/fl-orchestrator/deployment_scripts/client_config.yaml
+          type: File
