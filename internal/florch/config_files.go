@@ -2,13 +2,15 @@ package florch
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
+	"strconv"
 
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 	"gopkg.in/yaml.v2"
 )
 
-func BuildGlobalAggregatorConfigFiles(globalAggregator model.GlobalAggregator) (map[string]string, error) {
+func BuildGlobalAggregatorConfigFiles(flAggregator *model.FlAggregator) (map[string]string, error) {
 	configDirectoryPath := "../../configs/fl/"
 
 	datasetsConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "shared/datasets_config.yaml"))
@@ -29,7 +31,7 @@ func BuildGlobalAggregatorConfigFiles(globalAggregator model.GlobalAggregator) (
 	}
 	modelConfigString := string(modelConfigBytesArray)
 
-	globalAggregatorEntryConfig := buildGlobalAggregatorEntryConfigVarying(globalAggregator)
+	globalAggregatorEntryConfig := buildGlobalAggregatorEntryConfigVarying(flAggregator)
 	globalAggregatorEntryConfigString, err := interfaceToYamlString(globalAggregatorEntryConfig)
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)
@@ -40,7 +42,7 @@ func BuildGlobalAggregatorConfigFiles(globalAggregator model.GlobalAggregator) (
 	}
 	globalAggregatorEntryConfigString = fmt.Sprintf("%s\n%s", globalAggregatorEntryConfigString, string(globalAggregatorEntryConfigBytesArray))
 
-	globalAggregatorConfig := buildGlobalAggregatorConfigVarying(globalAggregator)
+	globalAggregatorConfig := buildGlobalAggregatorConfigVarying(flAggregator)
 	globalAggregatorConfigString, err := interfaceToYamlString(globalAggregatorConfig)
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)
@@ -62,7 +64,7 @@ func BuildGlobalAggregatorConfigFiles(globalAggregator model.GlobalAggregator) (
 	return filesData, nil
 }
 
-func BuildClientConfigFiles(client model.FlClient) (map[string]string, error) {
+func BuildClientConfigFiles(client *model.FlClient) (map[string]string, error) {
 	configDirectoryPath := "../../configs/fl/"
 
 	datasetsConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "shared/datasets_config.yaml"))
@@ -111,22 +113,23 @@ func BuildClientConfigFiles(client model.FlClient) (map[string]string, error) {
 	return filesData, nil
 }
 
-func buildGlobalAggregatorConfigVarying(globalAggregator model.GlobalAggregator) model.GlobalAggregatorConfig {
+func buildGlobalAggregatorConfigVarying(flAggregator *model.FlAggregator) model.GlobalAggregatorConfig {
 	return model.GlobalAggregatorConfig{
-		ServerAddress: globalAggregator.Address,
-		Rounds:        globalAggregator.Rounds,
+		ServerAddress: flAggregator.InternalAddress,
+		Rounds:        flAggregator.Rounds,
 	}
 }
 
-func buildGlobalAggregatorEntryConfigVarying(globalAggregator model.GlobalAggregator) model.GlobalAggregatorEntryConfig {
+func buildGlobalAggregatorEntryConfigVarying(flAggregator *model.FlAggregator) model.GlobalAggregatorEntryConfig {
 	return model.GlobalAggregatorEntryConfig{
-		NumClients: globalAggregator.NumClients,
+		NumClients: flAggregator.NumClients,
 	}
 }
 
-func buildClientConfigVarying(client model.FlClient) model.ClientConfig {
+func buildClientConfigVarying(client *model.FlClient) model.ClientConfig {
 	return model.ClientConfig{
-		ClientId:      client.Id,
+		//ClientId:      client.Id,
+		ClientId:      strconv.Itoa(rand.Intn(9) + 1),
 		ServerAddress: client.ParentAddress,
 		Epochs:        client.Epochs,
 	}

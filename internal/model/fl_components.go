@@ -6,12 +6,12 @@ type FlClient struct {
 	Epochs        int32
 }
 
-type LocalAggregator struct {
-}
-
-type GlobalAggregator struct {
-	Address    string
-	Port       int32
-	NumClients int32
-	Rounds     int32
+type FlAggregator struct {
+	Id              string
+	InternalAddress string
+	ExternalAddress string
+	ParentAddress   string
+	Port            int32
+	NumClients      int32
+	Rounds          int32
 }

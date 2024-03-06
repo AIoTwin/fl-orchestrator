@@ -1,9 +1,11 @@
 package model
 
 type Node struct {
-	Id         string
-	InternalIp string
-	Resources  *NodeResources
+	Id                 string
+	InternalIp         string
+	Resources          NodeResources
+	FlType             string
+	CommunicationCosts map[string]float32 // destination node ID -> cost
 }
 
 type NodeResources struct {

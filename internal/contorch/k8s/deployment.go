@@ -1,18 +1,19 @@
-package florch
+package k8sorch
 
 import (
 	"fmt"
 
+	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/common"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func BuildGlobalAggregatorDeployment(globalAggregator model.GlobalAggregator) *appsv1.Deployment {
+func BuildGlobalAggregatorDeployment(aggregator *model.FlAggregator) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: GLOBAL_AGGRETATOR_DEPLOYMENT_NAME,
+			Name: common.GLOBAL_AGGRETATOR_DEPLOYMENT_NAME,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -30,20 +31,21 @@ func BuildGlobalAggregatorDeployment(globalAggregator model.GlobalAggregator) *a
 					Containers: []corev1.Container{
 						{
 							Name:  "fl-ga",
-							Image: GLOBAL_AGGRETATOR_IMAGE,
+							Image: common.GLOBAL_AGGRETATOR_IMAGE,
 							Ports: []corev1.ContainerPort{
 								{
-									ContainerPort: globalAggregator.Port,
+									ContainerPort: aggregator.Port,
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									MountPath: GLOBAL_AGGRETATOR_MOUNT_PATH,
+									MountPath: common.GLOBAL_AGGRETATOR_MOUNT_PATH,
 									Name:      "gaconfig",
 								},
 							},
 						},
 					},
+					NodeName: aggregator.Id,
 					Volumes: []corev1.Volume{
 						{
 							Name: "gaconfig",
@@ -51,7 +53,7 @@ func BuildGlobalAggregatorDeployment(globalAggregator model.GlobalAggregator) *a
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									Items: []corev1.KeyToPath{},
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "gacm",
+										Name: common.GetAggregatorConfigMapName(aggregator.Id),
 									},
 								},
 							},
@@ -65,10 +67,10 @@ func BuildGlobalAggregatorDeployment(globalAggregator model.GlobalAggregator) *a
 	return deployment
 }
 
-func BuildClientDeployment(client model.FlClient) *appsv1.Deployment {
+func BuildClientDeployment(client *model.FlClient) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: getClientDeploymentName(client),
+			Name: common.GetClientDeploymentName(client.Id),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -86,15 +88,16 @@ func BuildClientDeployment(client model.FlClient) *appsv1.Deployment {
 					Containers: []corev1.Container{
 						{
 							Name:  "fl-client",
-							Image: FL_CLIENT_IMAGE,
+							Image: common.FL_CLIENT_IMAGE,
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									MountPath: FL_CLIENT_CONFIG_MOUNT_PATH,
+									MountPath: common.FL_CLIENT_CONFIG_MOUNT_PATH,
 									Name:      "clientconfig",
 								},
 							},
 						},
 					},
+					NodeName: client.Id,
 					Volumes: []corev1.Volume{
 						{
 							Name: "clientconfig",
@@ -102,7 +105,7 @@ func BuildClientDeployment(client model.FlClient) *appsv1.Deployment {
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									Items: []corev1.KeyToPath{},
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: fmt.Sprintf("clientcm-%s", client.Id),
+										Name: common.GetClientConfigMapName(client.Id),
 									},
 								},
 							},
@@ -114,8 +117,4 @@ func BuildClientDeployment(client model.FlClient) *appsv1.Deployment {
 	}
 
 	return deployment
-}
-
-func getClientDeploymentName(client model.FlClient) string {
-	return fmt.Sprintf("%s-%s", FL_CLIENT_DEPLOYMENT_PREFIX, client.Id)
 }

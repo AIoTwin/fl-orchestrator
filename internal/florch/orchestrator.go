@@ -10,33 +10,56 @@ import (
 
 type FlOrchestrator struct {
 	contOrch contorch.IContainerOrchestrator
+	flConfig IFlConfiguration
 	logger   hclog.Logger
 }
 
-func NewFlOrchestrator(contOrch contorch.IContainerOrchestrator, logger hclog.Logger) *FlOrchestrator {
+func NewFlOrchestrator(contOrch contorch.IContainerOrchestrator, flConfig IFlConfiguration, logger hclog.Logger) *FlOrchestrator {
 	return &FlOrchestrator{
 		contOrch: contOrch,
+		flConfig: flConfig,
 		logger:   logger,
 	}
 }
 
-func (orch *FlOrchestrator) DeployGlobalAggregator(globalAggregator model.GlobalAggregator) error {
-	globalAggregatorConfigFilesData, err := BuildGlobalAggregatorConfigFiles(globalAggregator)
+func (orch *FlOrchestrator) DeployAndStartFl(modelSize float32, communicationBudget float32) error {
+	nodes, err := orch.contOrch.GetAvailableNodes()
+	if err != nil {
+		orch.logger.Error(err.Error())
+		return err
+	}
+
+	clients, aggregators, epochs, localRounds := orch.flConfig.GetOptimalConfiguration(nodes, modelSize, communicationBudget)
+
+	fmt.Println("Clients ::")
+	for _, c := range clients {
+		fmt.Printf("\t%+v\n", c)
+	}
+	fmt.Println("Aggregators ::")
+	for _, a := range aggregators {
+		fmt.Printf("\t%+v\n", a)
+	}
+	fmt.Println("Epochs: ", epochs)
+	fmt.Println("Local rounds: ", localRounds)
+
+	orch.DeployGlobalAggregator(aggregators[0])
+
+	for _, client := range clients {
+		orch.DeployFlClient(client)
+	}
+
+	return nil
+}
+
+func (orch *FlOrchestrator) DeployGlobalAggregator(flAggregator *model.FlAggregator) error {
+	globalAggregatorConfigFilesData, err := BuildGlobalAggregatorConfigFiles(flAggregator)
 	if err != nil {
 		orch.logger.Error(fmt.Sprintf("Error while initializing global aggregator config files: %s", err.Error()))
 		return err
 	}
-	orch.contOrch.CreateConfigMapFromFiles("gacm", globalAggregatorConfigFilesData)
 
-	globalAggregatorDeployment := BuildGlobalAggregatorDeployment(globalAggregator)
-	if err := orch.contOrch.CreateDeployment(globalAggregatorDeployment); err != nil {
+	if err := orch.contOrch.CreateGlobalAggregator(flAggregator, globalAggregatorConfigFilesData); err != nil {
 		orch.logger.Error(fmt.Sprintf("Error while deploying global aggregator: %s", err.Error()))
-		return err
-	}
-
-	globalAggregatorService := BuildGlobalAggregatorService(globalAggregator)
-	if err := orch.contOrch.CreateService(globalAggregatorService); err != nil {
-		orch.logger.Error(fmt.Sprintf("Error while creating global aggregator service: %s", err.Error()))
 		return err
 	}
 
@@ -45,16 +68,14 @@ func (orch *FlOrchestrator) DeployGlobalAggregator(globalAggregator model.Global
 	return nil
 }
 
-func (orch *FlOrchestrator) DeployFlClient(client model.FlClient) error {
+func (orch *FlOrchestrator) DeployFlClient(client *model.FlClient) error {
 	clientConfigFilesData, err := BuildClientConfigFiles(client)
 	if err != nil {
 		orch.logger.Error(fmt.Sprintf("Error while initializing client %s config files: %s", client.Id, err.Error()))
 		return err
 	}
-	orch.contOrch.CreateConfigMapFromFiles(fmt.Sprintf("clientcm-%s", client.Id), clientConfigFilesData)
 
-	clientDeployment := BuildClientDeployment(client)
-	if err := orch.contOrch.CreateDeployment(clientDeployment); err != nil {
+	if err := orch.contOrch.CreateFlClient(client, clientConfigFilesData); err != nil {
 		orch.logger.Error(fmt.Sprintf("Error while creating client %s deployment: %s", client.Id, err.Error()))
 		return err
 	}

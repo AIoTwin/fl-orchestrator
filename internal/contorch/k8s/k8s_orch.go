@@ -1,13 +1,13 @@
-package contorch
+package k8sorch
 
 import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
-	"time"
+	"strings"
 
+	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/common"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,16 +19,13 @@ import (
 	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
-const defaultNodesMetricsCacheTimeS = 60
+const flTypeLabel = "fl/type"
+const communicationCostPrefix = "comm/"
 
 type K8sOrchestrator struct {
 	config           *rest.Config
 	clientset        *kubernetes.Clientset
 	metricsClientset *metricsv.Clientset
-
-	nodesStatus    []*model.Node
-	nodesCacheTime int
-	nodesTime      time.Time
 }
 
 func NewK8sOrchestrator(configFilePath string) (*K8sOrchestrator, error) {
@@ -51,25 +48,14 @@ func NewK8sOrchestrator(configFilePath string) (*K8sOrchestrator, error) {
 		return nil, err
 	}
 
-	nodesMetricsCacheTimeS, err := strconv.Atoi(os.Getenv("NODE_METRICS_CACHE_TIME_S"))
-	if err != nil {
-		nodesMetricsCacheTimeS = defaultNodesMetricsCacheTimeS
-	}
-
 	return &K8sOrchestrator{
 		config:           config,
 		clientset:        clientset,
 		metricsClientset: metricsClientset,
-		nodesCacheTime:   nodesMetricsCacheTimeS,
 	}, nil
 }
 
-func (orch *K8sOrchestrator) GetNodesStatus() ([]*model.Node, error) {
-	if orch.nodesStatus != nil && int(time.Since(orch.nodesTime).Seconds()) < orch.nodesCacheTime {
-		log.Println("Using node status cache")
-		return orch.nodesStatus, nil
-	}
-
+func (orch *K8sOrchestrator) GetAvailableNodes() ([]*model.Node, error) {
 	nodesCoreList, err := orch.clientset.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		log.Println("Failed to retrieve nodes on node status")
@@ -94,39 +80,60 @@ func (orch *K8sOrchestrator) GetNodesStatus() ([]*model.Node, error) {
 			continue
 		}
 
-		cpuUsage := nodeMetric.Usage[corev1.ResourceCPU]
-		cpuPercentage := float64(cpuUsage.MilliValue()) / float64(nodeCore.Status.Capacity.Cpu().MilliValue())
-
-		memoryUsage := nodeMetric.Usage[corev1.ResourceMemory]
-		memoryPercentage := float64(memoryUsage.Value()) / float64(nodeCore.Status.Capacity.Memory().Value())
-
-		hostIP := getHostIp(nodeCore)
-
-		node := &model.Node{
-			Id:         nodeCore.Name,
-			InternalIp: hostIP,
-			Resources: &model.NodeResources{
-				CpuUsage: cpuPercentage,
-				RamUsage: memoryPercentage,
-			},
+		if !isNodeReady(nodeCore) {
+			continue
 		}
 
-		nodes = append(nodes, node)
+		nodeModel := nodeCoreToNodeModel(nodeCore, nodeMetric)
+
+		nodes = append(nodes, nodeModel)
 	}
 
-	log.Println("Returning host nodes status ::")
+	log.Println("Returning nodes ::")
 	for _, node := range nodes {
 		log.Printf("%+v\n", node)
-
 	}
-
-	orch.nodesStatus = nodes
-	orch.nodesTime = time.Now()
 
 	return nodes, nil
 }
 
-func (orch *K8sOrchestrator) CreateConfigMapFromFiles(configMapName string, filesData map[string]string) error {
+func (orch *K8sOrchestrator) CreateGlobalAggregator(aggregator *model.FlAggregator, configFiles map[string]string) error {
+	err := orch.createConfigMapFromFiles(common.GetAggregatorConfigMapName(aggregator.Id), configFiles)
+	if err != nil {
+		return err
+	}
+
+	deployment := BuildGlobalAggregatorDeployment(aggregator)
+	err = orch.createDeployment(deployment)
+	if err != nil {
+		return err
+	}
+
+	service := BuildGlobalAggregatorService(aggregator)
+	err = orch.createService(service)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (orch *K8sOrchestrator) CreateFlClient(client *model.FlClient, configFiles map[string]string) error {
+	err := orch.createConfigMapFromFiles(common.GetClientConfigMapName(client.Id), configFiles)
+	if err != nil {
+		return err
+	}
+
+	deployment := BuildClientDeployment(client)
+	err = orch.createDeployment(deployment)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (orch *K8sOrchestrator) createConfigMapFromFiles(configMapName string, filesData map[string]string) error {
 	// Create a ConfigMap object
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -147,18 +154,15 @@ func (orch *K8sOrchestrator) CreateConfigMapFromFiles(configMapName string, file
 	return nil
 }
 
-func (orch *K8sOrchestrator) CreateDeployment(deployment *appsv1.Deployment) error {
+func (orch *K8sOrchestrator) createDeployment(deployment *appsv1.Deployment) error {
 	deploymentsClient := orch.clientset.AppsV1().Deployments(corev1.NamespaceDefault)
 
 	_, err := deploymentsClient.Create(context.TODO(), deployment, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
-func (orch *K8sOrchestrator) DeleteDeployment(deploymentName string) error {
+func (orch *K8sOrchestrator) deleteDeployment(deploymentName string) error {
 	deploymentsClient := orch.clientset.AppsV1().Deployments(corev1.NamespaceDefault)
 
 	deletePolicy := metav1.DeletePropagationForeground
@@ -171,7 +175,7 @@ func (orch *K8sOrchestrator) DeleteDeployment(deploymentName string) error {
 	return nil
 }
 
-func (orch *K8sOrchestrator) CreateService(service *corev1.Service) error {
+func (orch *K8sOrchestrator) createService(service *corev1.Service) error {
 	serviceClient := orch.clientset.CoreV1().Services(corev1.NamespaceDefault)
 
 	_, err := serviceClient.Create(context.TODO(), service, metav1.CreateOptions{})
@@ -182,7 +186,7 @@ func (orch *K8sOrchestrator) CreateService(service *corev1.Service) error {
 	return nil
 }
 
-func (orch *K8sOrchestrator) DeleteService(serviceName string) error {
+func (orch *K8sOrchestrator) deleteService(serviceName string) error {
 	serviceClient := orch.clientset.CoreV1().Services(corev1.NamespaceDefault)
 
 	deletePolicy := metav1.DeletePropagationForeground
@@ -193,6 +197,65 @@ func (orch *K8sOrchestrator) DeleteService(serviceName string) error {
 	}
 
 	return nil
+}
+
+// HELPER METHODS
+
+func isNodeReady(nodeCore corev1.Node) bool {
+	for _, condition := range nodeCore.Status.Conditions {
+		if condition.Type == "Ready" {
+			if condition.Status == "True" {
+				return true
+			} else {
+				return false
+			}
+		}
+	}
+
+	return false
+}
+
+func nodeCoreToNodeModel(nodeCore corev1.Node, nodeMetric v1beta1.NodeMetrics) *model.Node {
+	cpuUsage := nodeMetric.Usage[corev1.ResourceCPU]
+	cpuPercentage := float64(cpuUsage.MilliValue()) / float64(nodeCore.Status.Capacity.Cpu().MilliValue())
+
+	memoryUsage := nodeMetric.Usage[corev1.ResourceMemory]
+	memoryPercentage := float64(memoryUsage.Value()) / float64(nodeCore.Status.Capacity.Memory().Value())
+
+	hostIP := getHostIp(nodeCore)
+
+	nodeModel := &model.Node{
+		Id:         nodeCore.Name,
+		InternalIp: hostIP,
+		Resources: model.NodeResources{
+			CpuUsage: cpuPercentage,
+			RamUsage: memoryPercentage,
+		},
+		FlType:             getFlType(nodeCore.Labels),
+		CommunicationCosts: getCommunicationCosts(nodeCore.Labels),
+	}
+
+	return nodeModel
+}
+
+func getFlType(labels map[string]string) string {
+	flType := labels[flTypeLabel]
+	return flType
+}
+
+func getCommunicationCosts(labels map[string]string) map[string]float32 {
+	communicationCosts := make(map[string]float32)
+	for key, value := range labels {
+		if strings.HasPrefix(key, communicationCostPrefix) {
+			splits := strings.Split(key, communicationCostPrefix)
+			if len(splits) == 2 {
+				cost, _ := strconv.ParseFloat(value, 32)
+				communicationCosts[splits[1]] = float32(cost)
+			}
+		}
+	}
+
+	return communicationCosts
 }
 
 func getHostIp(node corev1.Node) string {
