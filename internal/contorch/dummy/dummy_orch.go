@@ -1,8 +1,6 @@
 package dummyorch
 
 import (
-	"time"
-
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/common"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/events"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
@@ -45,34 +43,8 @@ func (orch *DummyOrch) notifyNodeStateChanges() {
 		return
 	}
 
-	nodesAdded := []*model.Node{}
-	// check for added nodes
-	for _, node := range availableNodesNew {
-		_, found := orch.availableNodes[node.Id]
-		if !found {
-			nodesAdded = append(nodesAdded, node)
-		}
-	}
-
-	nodesRemoved := []*model.Node{}
-	// check for removed nodes
-	for _, node := range orch.availableNodes {
-		_, found := availableNodesNew[node.Id]
-		if !found {
-			nodesRemoved = append(nodesRemoved, node)
-		}
-	}
-
-	if len(nodesAdded) > 0 || len(nodesRemoved) > 0 {
-		event := events.Event{
-			Type:      common.NODE_STATE_CHANGE_EVENT_TYPE,
-			Timestamp: time.Now(),
-			Data: events.NodeStateChangeEvent{
-				NodesAdded:   nodesAdded,
-				NodesRemoved: nodesRemoved,
-			},
-		}
-
+	event := common.GetNodeStateChangeEvent(orch.availableNodes, availableNodesNew)
+	if (event != events.Event{}) {
 		orch.eventBus.Publish(event)
 	}
 

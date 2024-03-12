@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/events"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 )
 
@@ -35,6 +37,40 @@ func GetAvailableNodesFromFile() map[string]*model.Node {
 	}
 
 	return nodes
+}
+
+func GetNodeStateChangeEvent(availableNodesCurrent map[string]*model.Node, availableNodesNew map[string]*model.Node) events.Event {
+	nodesAdded := []*model.Node{}
+	// check for added nodes
+	for _, node := range availableNodesNew {
+		_, found := availableNodesCurrent[node.Id]
+		if !found {
+			nodesAdded = append(nodesAdded, node)
+		}
+	}
+
+	nodesRemoved := []*model.Node{}
+	// check for removed nodes
+	for _, node := range availableNodesCurrent {
+		_, found := availableNodesNew[node.Id]
+		if !found {
+			nodesRemoved = append(nodesRemoved, node)
+		}
+	}
+
+	var event events.Event
+	if len(nodesAdded) > 0 || len(nodesRemoved) > 0 {
+		event = events.Event{
+			Type:      NODE_STATE_CHANGE_EVENT_TYPE,
+			Timestamp: time.Now(),
+			Data: events.NodeStateChangeEvent{
+				NodesAdded:   nodesAdded,
+				NodesRemoved: nodesRemoved,
+			},
+		}
+	}
+
+	return event
 }
 
 func GetClientsAndAggregators(nodes []*model.Node) ([]*model.Node, []*model.Node) {
