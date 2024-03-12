@@ -130,40 +130,35 @@ func (orch *K8sOrchestrator) notifyNodeStateChanges() {
 		return
 	}
 
-	// check for removed nodes
-	for _, node := range orch.availableNodes {
-		_, found := availableNodesNew[node.Id]
-		if !found {
-			// Create the user registered event
-			event := events.Event{
-				Type:      common.NODE_STATE_CHANGE_EVENT_TYPE,
-				Timestamp: time.Now(),
-				Data: events.NodeStateChangeEvent{
-					State: common.NODE_REMOVED,
-					Node:  node,
-				},
-			}
-
-			orch.eventBus.Publish(event)
-		}
-	}
-
+	nodesAdded := []*model.Node{}
 	// check for added nodes
 	for _, node := range availableNodesNew {
 		_, found := orch.availableNodes[node.Id]
 		if !found {
-			// Create the user registered event
-			event := events.Event{
-				Type:      common.NODE_STATE_CHANGE_EVENT_TYPE,
-				Timestamp: time.Now(),
-				Data: events.NodeStateChangeEvent{
-					State: common.NODE_ADDED,
-					Node:  node,
-				},
-			}
-
-			orch.eventBus.Publish(event)
+			nodesAdded = append(nodesAdded, node)
 		}
+	}
+
+	nodesRemoved := []*model.Node{}
+	// check for removed nodes
+	for _, node := range orch.availableNodes {
+		_, found := availableNodesNew[node.Id]
+		if !found {
+			nodesRemoved = append(nodesRemoved, node)
+		}
+	}
+
+	if len(nodesAdded) > 0 || len(nodesRemoved) > 0 {
+		event := events.Event{
+			Type:      common.NODE_STATE_CHANGE_EVENT_TYPE,
+			Timestamp: time.Now(),
+			Data: events.NodeStateChangeEvent{
+				NodesAdded:   nodesAdded,
+				NodesRemoved: nodesRemoved,
+			},
+		}
+
+		orch.eventBus.Publish(event)
 	}
 
 	orch.availableNodes = availableNodesNew

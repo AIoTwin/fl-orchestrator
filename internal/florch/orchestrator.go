@@ -155,13 +155,15 @@ func (orch *FlOrchestrator) nodeStateChangeHandler(eventChan <-chan events.Event
 
 		// Handle the event
 		fmt.Println("New event:")
-		fmt.Println("State:", nodeStateChangeEvent.State)
-		fmt.Println("Node ID:", nodeStateChangeEvent.Node.Id)
+		fmt.Println("Nodes added:", nodeStateChangeEvent.NodesAdded)
+		fmt.Println("Node removed:", nodeStateChangeEvent.NodesRemoved)
 
-		if nodeStateChangeEvent.State == common.NODE_ADDED {
-			orch.nodesMap[nodeStateChangeEvent.Node.Id] = nodeStateChangeEvent.Node
-		} else if nodeStateChangeEvent.State == common.NODE_REMOVED {
-			delete(orch.nodesMap, nodeStateChangeEvent.Node.Id)
+		for _, node := range nodeStateChangeEvent.NodesAdded {
+			orch.nodesMap[node.Id] = node
+		}
+
+		for _, node := range nodeStateChangeEvent.NodesRemoved {
+			delete(orch.nodesMap, node.Id)
 		}
 
 		orch.removeFl()

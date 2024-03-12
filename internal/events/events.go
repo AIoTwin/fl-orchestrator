@@ -21,8 +21,8 @@ type FlFinishedEvent struct {
 
 // NodeStateChangedEvent represents the event structure for node state change
 type NodeStateChangeEvent struct {
-	State string
-	Node  *model.Node
+	NodesAdded   []*model.Node
+	NodesRemoved []*model.Node
 }
 
 // EventBus represents the event bus that handles event subscription and dispatching
