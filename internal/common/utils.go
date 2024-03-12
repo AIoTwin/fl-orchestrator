@@ -2,9 +2,40 @@ package common
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 )
+
+func GetAvailableNodesFromFile() map[string]*model.Node {
+	nodes := make(map[string]*model.Node)
+
+	records := ReadCsvFile("../../configs/cluster/cluster.csv")
+	for _, record := range records {
+		communicationCosts := make(map[string]float32)
+		commCostsSlice := strings.Split(record[3], ",")
+		for _, commCost := range commCostsSlice {
+			commCostSplited := strings.Split(commCost, ":")
+			if len(commCostSplited) == 2 {
+				costParsed, _ := strconv.ParseFloat(commCostSplited[1], 32)
+				communicationCosts[commCostSplited[0]] = float32(costParsed)
+			}
+		}
+
+		node := &model.Node{
+			Id:                 record[0],
+			InternalIp:         record[1],
+			Resources:          model.NodeResources{},
+			FlType:             record[2],
+			CommunicationCosts: communicationCosts,
+		}
+
+		nodes[node.Id] = node
+	}
+
+	return nodes
+}
 
 func GetClientsAndAggregators(nodes []*model.Node) ([]*model.Node, []*model.Node) {
 	clients := []*model.Node{}

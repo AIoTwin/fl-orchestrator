@@ -1,13 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"os"
+	"strconv"
 
-	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/common"
 	k8sorch "github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/contorch/k8s"
+	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/events"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/florch"
 	centhier "github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/florch/centrhier"
-	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -17,13 +17,9 @@ func main() {
 		Level: hclog.LevelFromString("DEBUG"),
 	})
 
-	/* dummyOrch := dummyorch.NewDummyOrch()
-	centHierConfig := centhier.NewCentrHierFlConfiguration()
+	eventBus := events.NewEventBus()
 
-	flOrchestrator := florch.NewFlOrchestrator(dummyOrch, centHierConfig, logger)
-	flOrchestrator.DeployAndStartFl(10, 600) */
-
-	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator("/home/ubuntu/.kube/config")
+	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator("/home/ubuntu/.kube/config", eventBus, false)
 	if err != nil {
 		logger.Error("Error while initializing k8s client ::", err.Error())
 		return
@@ -31,14 +27,14 @@ func main() {
 
 	centHierConfig := centhier.NewCentrHierFlConfiguration()
 
-	flOrchestrator := florch.NewFlOrchestrator(k8sOrchestrator, centHierConfig, logger)
+	modelSize, _ := strconv.ParseFloat(os.Args[1], 32)
+	communicationBudget, _ := strconv.ParseFloat(os.Args[2], 32)
+	flOrchestrator := florch.NewFlOrchestrator(k8sOrchestrator, centHierConfig, eventBus, logger, float32(modelSize), float32(communicationBudget))
 
-	flOrchestrator.DeployAndStartFl(10, 600)
-
-	//deployHardcodedConfig(flOrchestrator)
+	flOrchestrator.Start()
 }
 
-func deployHardcodedConfig(flOrchestrator *florch.FlOrchestrator) {
+/* func deployHardcodedConfig(flOrchestrator *florch.FlOrchestrator) {
 	// global aggregator
 	port := int32(30000)
 	globalAggregator := &model.FlAggregator{
@@ -67,4 +63,4 @@ func deployHardcodedConfig(flOrchestrator *florch.FlOrchestrator) {
 
 	flOrchestrator.DeployFlClient(client1)
 	flOrchestrator.DeployFlClient(client2)
-}
+} */

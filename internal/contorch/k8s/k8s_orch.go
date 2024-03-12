@@ -6,9 +6,12 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/common"
+	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/events"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
+	"github.com/robfig/cron/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,9 +29,13 @@ type K8sOrchestrator struct {
 	config           *rest.Config
 	clientset        *kubernetes.Clientset
 	metricsClientset *metricsv.Clientset
+	eventBus         *events.EventBus
+	cronScheduler    *cron.Cron
+	availableNodes   map[string]*model.Node
+	simulation       bool
 }
 
-func NewK8sOrchestrator(configFilePath string) (*K8sOrchestrator, error) {
+func NewK8sOrchestrator(configFilePath string, eventBus *events.EventBus, simulation bool) (*K8sOrchestrator, error) {
 	// connect to Kubernetes cluster
 	config, err := clientcmd.BuildConfigFromFlags("", configFilePath)
 	if err != nil {
@@ -52,10 +59,25 @@ func NewK8sOrchestrator(configFilePath string) (*K8sOrchestrator, error) {
 		config:           config,
 		clientset:        clientset,
 		metricsClientset: metricsClientset,
+		eventBus:         eventBus,
+		cronScheduler:    cron.New(cron.WithSeconds()),
+		availableNodes:   make(map[string]*model.Node),
+		simulation:       simulation,
 	}, nil
 }
 
-func (orch *K8sOrchestrator) GetAvailableNodes() ([]*model.Node, error) {
+func (orch *K8sOrchestrator) GetAvailableNodes(initialRequest bool) (map[string]*model.Node, error) {
+	if orch.simulation {
+		nodes := common.GetAvailableNodesFromFile()
+		if initialRequest {
+			for _, node := range nodes {
+				orch.availableNodes[node.Id] = node
+			}
+		}
+
+		return nodes, nil
+	}
+
 	nodesCoreList, err := orch.clientset.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		log.Println("Failed to retrieve nodes on node status")
@@ -73,7 +95,7 @@ func (orch *K8sOrchestrator) GetAvailableNodes() ([]*model.Node, error) {
 		nodeMetricsMap[nodeMetric.Name] = nodeMetric
 	}
 
-	nodes := []*model.Node{}
+	nodes := make(map[string]*model.Node)
 	for _, nodeCore := range nodesCoreList.Items {
 		nodeMetric, exists := nodeMetricsMap[nodeCore.Name]
 		if !exists {
@@ -86,15 +108,65 @@ func (orch *K8sOrchestrator) GetAvailableNodes() ([]*model.Node, error) {
 
 		nodeModel := nodeCoreToNodeModel(nodeCore, nodeMetric)
 
-		nodes = append(nodes, nodeModel)
-	}
+		nodes[nodeModel.Id] = nodeModel
 
-	log.Println("Returning nodes ::")
-	for _, node := range nodes {
-		log.Printf("%+v\n", node)
+		if initialRequest {
+			orch.availableNodes[nodeModel.Id] = nodeModel
+		}
 	}
 
 	return nodes, nil
+}
+
+func (orch *K8sOrchestrator) StartNodeStateChangeNotifier() {
+	orch.cronScheduler.AddFunc("@every 1s", orch.notifyNodeStateChanges)
+
+	orch.cronScheduler.Start()
+}
+
+func (orch *K8sOrchestrator) notifyNodeStateChanges() {
+	availableNodesNew, err := orch.GetAvailableNodes(false)
+	if err != nil {
+		return
+	}
+
+	// check for removed nodes
+	for _, node := range orch.availableNodes {
+		_, found := availableNodesNew[node.Id]
+		if !found {
+			// Create the user registered event
+			event := events.Event{
+				Type:      common.NODE_STATE_CHANGE_EVENT_TYPE,
+				Timestamp: time.Now(),
+				Data: events.NodeStateChangeEvent{
+					State: common.NODE_REMOVED,
+					Node:  node,
+				},
+			}
+
+			orch.eventBus.Publish(event)
+		}
+	}
+
+	// check for added nodes
+	for _, node := range availableNodesNew {
+		_, found := orch.availableNodes[node.Id]
+		if !found {
+			// Create the user registered event
+			event := events.Event{
+				Type:      common.NODE_STATE_CHANGE_EVENT_TYPE,
+				Timestamp: time.Now(),
+				Data: events.NodeStateChangeEvent{
+					State: common.NODE_ADDED,
+					Node:  node,
+				},
+			}
+
+			orch.eventBus.Publish(event)
+		}
+	}
+
+	orch.availableNodes = availableNodesNew
 }
 
 func (orch *K8sOrchestrator) CreateGlobalAggregator(aggregator *model.FlAggregator, configFiles map[string]string) error {
@@ -104,6 +176,9 @@ func (orch *K8sOrchestrator) CreateGlobalAggregator(aggregator *model.FlAggregat
 	}
 
 	deployment := BuildGlobalAggregatorDeployment(aggregator)
+	if !orch.simulation {
+		deployment.Spec.Template.Spec.NodeName = aggregator.Id
+	}
 	err = orch.createDeployment(deployment)
 	if err != nil {
 		return err
@@ -118,6 +193,25 @@ func (orch *K8sOrchestrator) CreateGlobalAggregator(aggregator *model.FlAggregat
 	return nil
 }
 
+func (orch *K8sOrchestrator) RemoveGlobalAggregator(aggregator *model.FlAggregator) error {
+	err := orch.deleteService(common.GetAggregatorServiceName(aggregator.Id))
+	if err != nil {
+		return err
+	}
+
+	err = orch.deleteDeployment(common.GLOBAL_AGGRETATOR_DEPLOYMENT_NAME)
+	if err != nil {
+		return err
+	}
+
+	err = orch.deleteConfigMap(common.GetAggregatorConfigMapName(aggregator.Id))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (orch *K8sOrchestrator) CreateFlClient(client *model.FlClient, configFiles map[string]string) error {
 	err := orch.createConfigMapFromFiles(common.GetClientConfigMapName(client.Id), configFiles)
 	if err != nil {
@@ -125,6 +219,9 @@ func (orch *K8sOrchestrator) CreateFlClient(client *model.FlClient, configFiles 
 	}
 
 	deployment := BuildClientDeployment(client)
+	if !orch.simulation {
+		deployment.Spec.Template.Spec.NodeName = client.Id
+	}
 	err = orch.createDeployment(deployment)
 	if err != nil {
 		return err
@@ -133,8 +230,23 @@ func (orch *K8sOrchestrator) CreateFlClient(client *model.FlClient, configFiles 
 	return nil
 }
 
+func (orch *K8sOrchestrator) RemoveClient(client *model.FlClient) error {
+	err := orch.deleteDeployment(common.GetClientDeploymentName(client.Id))
+	if err != nil {
+		return err
+	}
+
+	err = orch.deleteConfigMap(common.GetClientConfigMapName(client.Id))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (orch *K8sOrchestrator) createConfigMapFromFiles(configMapName string, filesData map[string]string) error {
-	// Create a ConfigMap object
+	configMapsClient := orch.clientset.CoreV1().ConfigMaps(corev1.NamespaceDefault)
+
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configMapName,
@@ -143,13 +255,21 @@ func (orch *K8sOrchestrator) createConfigMapFromFiles(configMapName string, file
 		Data: filesData,
 	}
 
-	// Create or update the ConfigMap
-	_, err := orch.clientset.CoreV1().ConfigMaps(corev1.NamespaceDefault).Create(context.TODO(), cm, metav1.CreateOptions{})
+	_, err := configMapsClient.Create(context.TODO(), cm, metav1.CreateOptions{})
 	if err != nil {
 		fmt.Printf("Error creating ConfigMap: %v\n", err)
 		return err
 	}
-	fmt.Println("ConfigMap created successfully.")
+
+	return nil
+}
+
+func (orch *K8sOrchestrator) deleteConfigMap(configMapName string) error {
+	configMapsClient := orch.clientset.CoreV1().ConfigMaps(corev1.NamespaceDefault)
+
+	if err := configMapsClient.Delete(context.TODO(), configMapName, metav1.DeleteOptions{}); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -165,10 +285,7 @@ func (orch *K8sOrchestrator) createDeployment(deployment *appsv1.Deployment) err
 func (orch *K8sOrchestrator) deleteDeployment(deploymentName string) error {
 	deploymentsClient := orch.clientset.AppsV1().Deployments(corev1.NamespaceDefault)
 
-	deletePolicy := metav1.DeletePropagationForeground
-	if err := deploymentsClient.Delete(context.TODO(), deploymentName, metav1.DeleteOptions{
-		PropagationPolicy: &deletePolicy,
-	}); err != nil {
+	if err := deploymentsClient.Delete(context.TODO(), deploymentName, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 
@@ -176,9 +293,9 @@ func (orch *K8sOrchestrator) deleteDeployment(deploymentName string) error {
 }
 
 func (orch *K8sOrchestrator) createService(service *corev1.Service) error {
-	serviceClient := orch.clientset.CoreV1().Services(corev1.NamespaceDefault)
+	servicesClient := orch.clientset.CoreV1().Services(corev1.NamespaceDefault)
 
-	_, err := serviceClient.Create(context.TODO(), service, metav1.CreateOptions{})
+	_, err := servicesClient.Create(context.TODO(), service, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -187,12 +304,9 @@ func (orch *K8sOrchestrator) createService(service *corev1.Service) error {
 }
 
 func (orch *K8sOrchestrator) deleteService(serviceName string) error {
-	serviceClient := orch.clientset.CoreV1().Services(corev1.NamespaceDefault)
+	servicesClient := orch.clientset.CoreV1().Services(corev1.NamespaceDefault)
 
-	deletePolicy := metav1.DeletePropagationForeground
-	if err := serviceClient.Delete(context.TODO(), serviceName, metav1.DeleteOptions{
-		PropagationPolicy: &deletePolicy,
-	}); err != nil {
+	if err := servicesClient.Delete(context.TODO(), serviceName, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 

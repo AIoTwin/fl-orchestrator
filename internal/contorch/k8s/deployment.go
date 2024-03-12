@@ -45,7 +45,6 @@ func BuildGlobalAggregatorDeployment(aggregator *model.FlAggregator) *appsv1.Dep
 							},
 						},
 					},
-					NodeName: aggregator.Id,
 					Volumes: []corev1.Volume{
 						{
 							Name: "gaconfig",
@@ -97,7 +96,6 @@ func BuildClientDeployment(client *model.FlClient) *appsv1.Deployment {
 							},
 						},
 					},
-					NodeName: client.Id,
 					Volumes: []corev1.Volume{
 						{
 							Name: "clientconfig",
