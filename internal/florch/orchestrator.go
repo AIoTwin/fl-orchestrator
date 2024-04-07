@@ -78,7 +78,13 @@ func (orch *FlOrchestrator) deployFl() {
 	fmt.Println("Epochs: ", epochs)
 	fmt.Println("Local rounds: ", localRounds)
 
-	orch.deployGlobalAggregator(aggregators[0])
+	for _, aggregator := range aggregators {
+		if aggregator.ParentAddress == "" {
+			orch.deployGlobalAggregator(aggregator)
+		} else {
+			orch.deployLocalAggregator(aggregator)
+		}
+	}
 
 	for _, client := range clients {
 		orch.deployFlClient(client)
@@ -90,7 +96,13 @@ func (orch *FlOrchestrator) removeFl() {
 		orch.contOrch.RemoveClient(client)
 	}
 
-	orch.contOrch.RemoveGlobalAggregator(orch.aggregators[0])
+	for _, aggregator := range orch.aggregators {
+		if aggregator.ParentAddress == "" {
+			orch.contOrch.RemoveGlobalAggregator(aggregator)
+		} else {
+			orch.contOrch.RemoveLocalAggregator(aggregator)
+		}
+	}
 }
 
 func (orch *FlOrchestrator) deployGlobalAggregator(flAggregator *model.FlAggregator) error {
@@ -106,6 +118,23 @@ func (orch *FlOrchestrator) deployGlobalAggregator(flAggregator *model.FlAggrega
 	}
 
 	orch.logger.Info("Global aggregator deployed!")
+
+	return nil
+}
+
+func (orch *FlOrchestrator) deployLocalAggregator(flAggregator *model.FlAggregator) error {
+	localAggregatorConfigFilesData, err := BuildLocalAggregatorConfigFiles(flAggregator)
+	if err != nil {
+		orch.logger.Error(fmt.Sprintf("Error while initializing local aggregator config files: %s", err.Error()))
+		return err
+	}
+
+	if err := orch.contOrch.CreateLocalAggregator(flAggregator, localAggregatorConfigFilesData); err != nil {
+		orch.logger.Error(fmt.Sprintf("Error while deploying local aggregator: %s", err.Error()))
+		return err
+	}
+
+	orch.logger.Info("Local aggregator deployed!")
 
 	return nil
 }

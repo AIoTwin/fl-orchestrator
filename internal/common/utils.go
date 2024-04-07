@@ -102,16 +102,32 @@ func ClientNodesToFlClients(clients []*model.Node, flAggregator *model.FlAggrega
 	return flClients
 }
 
-func GetAggregatorServiceName(aggregatorId string) string {
+func GetGlobalAggregatorServiceName(aggregatorId string) string {
 	return fmt.Sprintf("%s-%s", GLOBAL_AGGREGATOR_SERVICE_NAME, aggregatorId)
 }
 
-func GetAggregatorExternalAddress(aggregatorId string) string {
-	return fmt.Sprintf("%s:%s", GetAggregatorServiceName(aggregatorId), fmt.Sprint(GLOBAL_AGGREGATOR_PORT))
+func GetGlobalAggregatorExternalAddress(aggregatorId string) string {
+	return fmt.Sprintf("%s:%s", GetGlobalAggregatorServiceName(aggregatorId), fmt.Sprint(GLOBAL_AGGREGATOR_PORT))
 }
 
-func GetAggregatorConfigMapName(aggregatorId string) string {
+func GetGlobalAggregatorConfigMapName(aggregatorId string) string {
 	return fmt.Sprintf("%s-%s", GLOBAL_AGGREGATOR_CONFIG_MAP_NAME, aggregatorId)
+}
+
+func GetLocalAggregatorServiceName(aggregatorId string) string {
+	return fmt.Sprintf("%s-%s", LOCAL_AGGREGATOR_SERVICE_NAME, aggregatorId)
+}
+
+func GetLocalAggregatorExternalAddress(aggregatorId string) string {
+	return fmt.Sprintf("%s:%s", GetLocalAggregatorServiceName(aggregatorId), fmt.Sprint(LOCAL_AGGREGATOR_PORT))
+}
+
+func GetLocalAggregatorConfigMapName(aggregatorId string) string {
+	return fmt.Sprintf("%s-%s", LOCAL_AGGREGATOR_CONFIG_MAP_NAME, aggregatorId)
+}
+
+func GetLocalAggregatorDeploymentName(aggregatorId string) string {
+	return fmt.Sprintf("%s-%s", LOCAL_AGGRETATOR_DEPLOYMENT_PREFIX, aggregatorId)
 }
 
 func GetClientConfigMapName(clientId string) string {

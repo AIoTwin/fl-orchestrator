@@ -52,7 +52,63 @@ func BuildGlobalAggregatorDeployment(aggregator *model.FlAggregator) *appsv1.Dep
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									Items: []corev1.KeyToPath{},
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: common.GetAggregatorConfigMapName(aggregator.Id),
+										Name: common.GetGlobalAggregatorConfigMapName(aggregator.Id),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return deployment
+}
+
+func BuildLocalAggregatorDeployment(aggregator *model.FlAggregator) *appsv1.Deployment {
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: common.GetLocalAggregatorDeploymentName(aggregator.Id),
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"fl": fmt.Sprintf("la-%s", aggregator.Id),
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"fl": fmt.Sprintf("la-%s", aggregator.Id),
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "fl-la",
+							Image: common.LOCAL_AGGRETATOR_IMAGE,
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: aggregator.Port,
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									MountPath: common.LOCAL_AGGRETATOR_MOUNT_PATH,
+									Name:      "laconfig",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "laconfig",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									Items: []corev1.KeyToPath{},
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: common.GetLocalAggregatorConfigMapName(aggregator.Id),
 									},
 								},
 							},

@@ -1,5 +1,6 @@
-server_type: 'TorchServerWithCentralizedEval'
+server_type: 'TorchServer'
 device: 'cpu'
+num_children: 2
 
 strategy_config:
 strategy_type: "FedAvg"
@@ -16,6 +17,6 @@ central_loader_params:
   pin_memory: True
 
 # logging config, model_config
-config: ['../example_global_server/logging_config.yaml',
-         '../example_global_server/model_config.yaml',
-         '../example_global_server/datasets_config.yaml']
+config: ['../example_local_server/logging_config.yaml',
+         '../example_local_server/model_config.yaml',
+         '../example_local_server/datasets_config.yaml']

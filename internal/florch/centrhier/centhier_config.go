@@ -57,7 +57,7 @@ func getOptimalConfigurationCentralized(nodes []*model.Node, modelSize float32, 
 	flAggregator := &model.FlAggregator{
 		Id:              bestAggregator.Id,
 		InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.GLOBAL_AGGREGATOR_PORT)),
-		ExternalAddress: common.GetAggregatorExternalAddress(bestAggregator.Id),
+		ExternalAddress: common.GetGlobalAggregatorExternalAddress(bestAggregator.Id),
 		Port:            common.GLOBAL_AGGREGATOR_PORT,
 		NumClients:      int32(len(clients)),
 		Rounds:          common.GLOBAL_AGGREGATOR_ROUNDS,
@@ -72,12 +72,47 @@ func getOptimalConfigurationCentralized(nodes []*model.Node, modelSize float32, 
 
 func getOptimalConfigurationHierarchical(nodes []*model.Node, modelSize float32, communicationBudget float32) ([]*model.FlClient, []*model.FlAggregator,
 	int32, int32) {
-	clients := []*model.FlClient{}
-	aggregators := []*model.FlAggregator{}
-	epochs := int32(0)
-	localRounds := int32(0)
+	epochs := int32(1)
+	localRounds := int32(1)
+	flAggregators := []*model.FlAggregator{}
+	flClients := []*model.FlClient{}
 
-	return clients, aggregators, epochs, localRounds
+	/* clients, aggregators := common.GetClientsAndAggregators(nodes)
+	clusters := [][]*model.Node{}
+	for i := 0; i < len(clients); i = i + 2 {
+		cluster := []*model.Node{
+			clients[i], clients[i+1],
+		}
+		clusters = append(clusters, cluster)
+	}
+
+	globalAggregator := aggregators[0]
+	globalFlAggregator := &model.FlAggregator{
+		Id:              globalAggregator.Id,
+		InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.GLOBAL_AGGREGATOR_PORT)),
+		ExternalAddress: common.GetGlobalAggregatorExternalAddress(globalAggregator.Id),
+		Port:            common.GLOBAL_AGGREGATOR_PORT,
+		NumClients:      int32(len(aggregators) - 1),
+		Rounds:          common.GLOBAL_AGGREGATOR_ROUNDS,
+	}
+	flAggregators = append(flAggregators, globalFlAggregator)
+	for n, cluster := range clusters {
+		localAggregator := aggregators[n+1]
+		localFlAggregator := &model.FlAggregator{
+			Id:              localAggregator.Id,
+			InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.LOCAL_AGGREGATOR_PORT)),
+			ExternalAddress: common.GetLocalAggregatorExternalAddress(localAggregator.Id),
+			Port:            common.LOCAL_AGGREGATOR_PORT,
+			NumClients:      int32(len(cluster)),
+			Rounds:          common.LOCAL_AGGREGATOR_ROUNDS,
+			ParentAddress:   globalFlAggregator.ExternalAddress,
+		}
+		flAggregators = append(flAggregators, localFlAggregator)
+		flClientsCluster := common.ClientNodesToFlClients(cluster, localFlAggregator, 1)
+		flClients = append(flClients, flClientsCluster...)
+	} */
+
+	return flClients, flAggregators, epochs, localRounds
 }
 
 func getOptimalSetup(epochsCentralized int32, epochsHierarchical int32, localRoundsHierarchical int32, numClustersHierarchical int32) string {

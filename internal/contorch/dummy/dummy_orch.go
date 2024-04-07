@@ -59,6 +59,14 @@ func (orch *DummyOrch) RemoveGlobalAggregator(aggregator *model.FlAggregator) er
 	return nil
 }
 
+func (orch *DummyOrch) CreateLocalAggregator(aggregator *model.FlAggregator, configFiles map[string]string) error {
+	return nil
+}
+
+func (orch *DummyOrch) RemoveLocalAggregator(aggregator *model.FlAggregator) error {
+	return nil
+}
+
 func (orch *DummyOrch) CreateFlClient(client *model.FlClient, configFiles map[string]string) error {
 	return nil
 }

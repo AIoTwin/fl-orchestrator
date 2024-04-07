@@ -138,7 +138,7 @@ func (orch *K8sOrchestrator) notifyNodeStateChanges() {
 }
 
 func (orch *K8sOrchestrator) CreateGlobalAggregator(aggregator *model.FlAggregator, configFiles map[string]string) error {
-	err := orch.createConfigMapFromFiles(common.GetAggregatorConfigMapName(aggregator.Id), configFiles)
+	err := orch.createConfigMapFromFiles(common.GetGlobalAggregatorConfigMapName(aggregator.Id), configFiles)
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (orch *K8sOrchestrator) CreateGlobalAggregator(aggregator *model.FlAggregat
 }
 
 func (orch *K8sOrchestrator) RemoveGlobalAggregator(aggregator *model.FlAggregator) error {
-	err := orch.deleteService(common.GetAggregatorServiceName(aggregator.Id))
+	err := orch.deleteService(common.GetGlobalAggregatorServiceName(aggregator.Id))
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,50 @@ func (orch *K8sOrchestrator) RemoveGlobalAggregator(aggregator *model.FlAggregat
 		return err
 	}
 
-	err = orch.deleteConfigMap(common.GetAggregatorConfigMapName(aggregator.Id))
+	err = orch.deleteConfigMap(common.GetGlobalAggregatorConfigMapName(aggregator.Id))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (orch *K8sOrchestrator) CreateLocalAggregator(aggregator *model.FlAggregator, configFiles map[string]string) error {
+	err := orch.createConfigMapFromFiles(common.GetLocalAggregatorConfigMapName(aggregator.Id), configFiles)
+	if err != nil {
+		return err
+	}
+
+	deployment := BuildLocalAggregatorDeployment(aggregator)
+	if !orch.simulation {
+		deployment.Spec.Template.Spec.NodeName = aggregator.Id
+	}
+	err = orch.createDeployment(deployment)
+	if err != nil {
+		return err
+	}
+
+	service := BuildLocalAggregatorService(aggregator)
+	err = orch.createService(service)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (orch *K8sOrchestrator) RemoveLocalAggregator(aggregator *model.FlAggregator) error {
+	err := orch.deleteService(common.GetLocalAggregatorServiceName(aggregator.Id))
+	if err != nil {
+		return err
+	}
+
+	err = orch.deleteDeployment(common.GetLocalAggregatorDeploymentName(aggregator.Id))
+	if err != nil {
+		return err
+	}
+
+	err = orch.deleteConfigMap(common.GetLocalAggregatorConfigMapName(aggregator.Id))
 	if err != nil {
 		return err
 	}

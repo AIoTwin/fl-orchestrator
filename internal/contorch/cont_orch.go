@@ -9,6 +9,8 @@ type IContainerOrchestrator interface {
 	StartNodeStateChangeNotifier()
 	CreateGlobalAggregator(aggregator *model.FlAggregator, configFiles map[string]string) error
 	RemoveGlobalAggregator(aggregator *model.FlAggregator) error
+	CreateLocalAggregator(aggregator *model.FlAggregator, configFiles map[string]string) error
+	RemoveLocalAggregator(aggregator *model.FlAggregator) error
 	CreateFlClient(client *model.FlClient, configFiles map[string]string) error
 	RemoveClient(client *model.FlClient) error
 }

@@ -2,6 +2,7 @@ package common
 
 // Container images
 const FL_CLIENT_IMAGE = "cilicivan96/aiotwin-fl-client:1.0"
+const LOCAL_AGGRETATOR_IMAGE = "cilicivan96/aiotwin-fl-local-server:1.0"
 const GLOBAL_AGGRETATOR_IMAGE = "cilicivan96/aiotwin-fl-global-server:1.0"
 
 // FL Client configs
@@ -17,6 +18,15 @@ const GLOBAL_AGGREGATOR_CONFIG_MAP_NAME = "fl-ga-cm"
 
 const GLOBAL_AGGREGATOR_PORT = 8080
 const GLOBAL_AGGREGATOR_ROUNDS = 100
+
+// LA configs
+const LOCAL_AGGRETATOR_DEPLOYMENT_PREFIX = "fl-la"
+const LOCAL_AGGRETATOR_MOUNT_PATH = "/app/config/example_local_server/"
+const LOCAL_AGGREGATOR_SERVICE_NAME = "fl-la-svc"
+const LOCAL_AGGREGATOR_CONFIG_MAP_NAME = "fl-la-cm"
+
+const LOCAL_AGGREGATOR_PORT = 8080
+const LOCAL_AGGREGATOR_ROUNDS = 100
 
 // FL types
 const FL_TYPE_CLIENT = "client"

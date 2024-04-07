@@ -1,0 +1,3 @@
+subset_strategy: "flat_fair"
+config: [ '../example_local_server/datasets_config.yaml',
+          '../example_local_server/logging_config.yaml' ]
