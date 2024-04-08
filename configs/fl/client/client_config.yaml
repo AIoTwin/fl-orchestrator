@@ -1,16 +1,15 @@
 device: 'cpu'
-client_type: 'TorchClient'
 
 trainer_config:
 train_config:
 train_dataset_id: 'cifar10/train'
 train_loader_params:
-  batch_size: 64
+  batch_size: 16
   num_workers: 0
   shuffle: True
   pin_memory: True
 optimizer:
-  type: 'adam'
+  type: 'SGD'
   params:
     lr: 0.001
 #    momentum: 0.9
@@ -25,7 +24,7 @@ main_metric: 'Accuracy'
 eval_metrics: [ 'Accuracy' ]
 eval_dataset_id: 'cifar10/val'
 eval_loader_params:
-  batch_size: 128
+  batch_size: 1
   num_workers: 0
   shuffle: False
   pin_memory: True

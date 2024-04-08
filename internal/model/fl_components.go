@@ -14,4 +14,5 @@ type FlAggregator struct {
 	Port            int32
 	NumClients      int32
 	Rounds          int32
+	LocalRounds     int32
 }

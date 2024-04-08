@@ -81,13 +81,16 @@ func (orch *FlOrchestrator) deployFl() {
 	for _, aggregator := range aggregators {
 		if aggregator.ParentAddress == "" {
 			orch.deployGlobalAggregator(aggregator)
+			time.Sleep(1 * time.Second)
 		} else {
 			orch.deployLocalAggregator(aggregator)
+			time.Sleep(1 * time.Second)
 		}
 	}
 
 	for _, client := range clients {
 		orch.deployFlClient(client)
+		time.Sleep(1 * time.Second)
 	}
 }
 

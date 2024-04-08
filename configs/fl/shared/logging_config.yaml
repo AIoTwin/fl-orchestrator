@@ -1,8 +1,8 @@
 wandb_config:
-project: 'example_project'
-entity: 'aiotwin-wandb'
+project: 'ivan_test_k3s'
+entity: 'aiotwins'
 run_name: 'example_run'
-enabled: False
+enabled: True
 local_logging_config:
 log_file_path: 'logs/example/example.log'
 scalar_freq: 100

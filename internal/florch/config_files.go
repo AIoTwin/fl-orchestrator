@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"strconv"
 
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 	"gopkg.in/yaml.v2"
@@ -31,30 +30,25 @@ func BuildGlobalAggregatorConfigFiles(flAggregator *model.FlAggregator) (map[str
 	}
 	modelConfigString := string(modelConfigBytesArray)
 
+	globalAggregatorConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "global_aggregator/aggregator_config.yaml"))
+	if err != nil {
+		fmt.Print(err)
+	}
+	globalAggregatorConfigString := string(globalAggregatorConfigBytesArray)
+
 	globalAggregatorEntryConfig := buildGlobalAggregatorEntryConfigVarying(flAggregator)
 	globalAggregatorEntryConfigString, err := interfaceToYamlString(globalAggregatorEntryConfig)
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)
 	}
-	globalAggregatorEntryConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "global_aggregator/entry_server.yaml"))
+	globalAggregatorEntryConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "global_aggregator/entry.yaml"))
 	if err != nil {
 		fmt.Print(err)
 	}
 	globalAggregatorEntryConfigString = fmt.Sprintf("%s\n%s", globalAggregatorEntryConfigString, string(globalAggregatorEntryConfigBytesArray))
 
-	globalAggregatorConfig := buildGlobalAggregatorConfigVarying(flAggregator)
-	globalAggregatorConfigString, err := interfaceToYamlString(globalAggregatorConfig)
-	if err != nil {
-		fmt.Printf("Error while Marshaling. %v", err)
-	}
-	globalAggregatorConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "global_aggregator/aggregator_config.yaml"))
-	if err != nil {
-		fmt.Print(err)
-	}
-	globalAggregatorConfigString = fmt.Sprintf("%s\n%s", globalAggregatorConfigString, string(globalAggregatorConfigBytesArray))
-
 	filesData := map[string]string{
-		"entry_server.yaml":      globalAggregatorEntryConfigString,
+		"entry.yaml":             globalAggregatorEntryConfigString,
 		"aggregator_config.yaml": globalAggregatorConfigString,
 		"logging_config.yaml":    loggingConfigString,
 		"datasets_config.yaml":   datasetsConfigString,
@@ -85,30 +79,25 @@ func BuildLocalAggregatorConfigFiles(flAggregator *model.FlAggregator) (map[stri
 	}
 	modelConfigString := string(modelConfigBytesArray)
 
+	localAggregatorConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "local_aggregator/aggregator_config.yaml"))
+	if err != nil {
+		fmt.Print(err)
+	}
+	localAggregatorConfigString := string(localAggregatorConfigBytesArray)
+
 	localAggregatorEntryConfig := buildLocalAggregatorEntryConfigVarying(flAggregator)
 	localAggregatorEntryConfigString, err := interfaceToYamlString(localAggregatorEntryConfig)
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)
 	}
-	localAggregatorEntryConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "local_aggregator/entry_server.yaml"))
+	localAggregatorEntryConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "local_aggregator/entry.yaml"))
 	if err != nil {
 		fmt.Print(err)
 	}
 	localAggregatorEntryConfigString = fmt.Sprintf("%s\n%s", localAggregatorEntryConfigString, string(localAggregatorEntryConfigBytesArray))
 
-	localAggregatorConfig := buildLocalAggregatorConfigVarying(flAggregator)
-	localAggregatorConfigString, err := interfaceToYamlString(localAggregatorConfig)
-	if err != nil {
-		fmt.Printf("Error while Marshaling. %v", err)
-	}
-	localAggregatorConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "local_aggregator/aggregator_config.yaml"))
-	if err != nil {
-		fmt.Print(err)
-	}
-	localAggregatorConfigString = fmt.Sprintf("%s\n%s", localAggregatorConfigString, string(localAggregatorConfigBytesArray))
-
 	filesData := map[string]string{
-		"entry_server.yaml":      localAggregatorEntryConfigString,
+		"entry.yaml":             localAggregatorEntryConfigString,
 		"aggregator_config.yaml": localAggregatorConfigString,
 		"logging_config.yaml":    loggingConfigString,
 		"datasets_config.yaml":   datasetsConfigString,
@@ -139,25 +128,25 @@ func BuildClientConfigFiles(client *model.FlClient) (map[string]string, error) {
 	}
 	modelConfigString := string(modelConfigBytesArray)
 
-	clientEntryConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "client/entry_client.yaml"))
-	if err != nil {
-		fmt.Print(err)
-	}
-	clientEntryConfigString := string(clientEntryConfigBytesArray)
-
-	clientConfig := buildClientConfigVarying(client)
-	clientConfigString, err := interfaceToYamlString(clientConfig)
-	if err != nil {
-		fmt.Printf("Error while Marshaling. %v", err)
-	}
 	clientConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "client/client_config.yaml"))
 	if err != nil {
 		fmt.Print(err)
 	}
-	clientConfigString = fmt.Sprintf("%s\n%s", clientConfigString, string(clientConfigBytesArray))
+	clientConfigString := string(clientConfigBytesArray)
+
+	clientEntryConfig := buildClientEntryConfigVarying(client)
+	clientEntryConfigString, err := interfaceToYamlString(clientEntryConfig)
+	if err != nil {
+		fmt.Printf("Error while Marshaling. %v", err)
+	}
+	clientEntryConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "client/entry.yaml"))
+	if err != nil {
+		fmt.Print(err)
+	}
+	clientEntryConfigString = fmt.Sprintf("%s\n%s", clientEntryConfigString, string(clientEntryConfigBytesArray))
 
 	filesData := map[string]string{
-		"entry_client.yaml":    clientEntryConfigString,
+		"entry.yaml":           clientEntryConfigString,
 		"client_config.yaml":   clientConfigString,
 		"logging_config.yaml":  loggingConfigString,
 		"datasets_config.yaml": datasetsConfigString,
@@ -167,39 +156,30 @@ func BuildClientConfigFiles(client *model.FlClient) (map[string]string, error) {
 	return filesData, nil
 }
 
-func buildGlobalAggregatorConfigVarying(flAggregator *model.FlAggregator) model.GlobalAggregatorConfig {
-	return model.GlobalAggregatorConfig{
-		ServerAddress: flAggregator.InternalAddress,
-		Rounds:        flAggregator.Rounds,
-	}
-}
-
 func buildGlobalAggregatorEntryConfigVarying(flAggregator *model.FlAggregator) model.GlobalAggregatorEntryConfig {
 	return model.GlobalAggregatorEntryConfig{
-		NumClients: flAggregator.NumClients,
-	}
-}
-
-func buildLocalAggregatorConfigVarying(flAggregator *model.FlAggregator) model.LocalAggregatorConfig {
-	return model.LocalAggregatorConfig{
-		ServerAddress: flAggregator.InternalAddress,
-		ParentAddress: flAggregator.ParentAddress,
+		NumClients:    flAggregator.NumClients,
 		Rounds:        flAggregator.Rounds,
+		ServerAddress: flAggregator.InternalAddress,
 	}
 }
 
 func buildLocalAggregatorEntryConfigVarying(flAggregator *model.FlAggregator) model.LocalAggregatorEntryConfig {
 	return model.LocalAggregatorEntryConfig{
-		NumClients: flAggregator.NumClients,
+		NumClients:    flAggregator.NumClients,
+		ServerAddress: flAggregator.InternalAddress,
+		ParentAddress: flAggregator.ParentAddress,
+		Rounds:        flAggregator.Rounds,
+		LocalRounds:   flAggregator.LocalRounds,
 	}
 }
 
-func buildClientConfigVarying(client *model.FlClient) model.ClientConfig {
-	return model.ClientConfig{
+func buildClientEntryConfigVarying(client *model.FlClient) model.ClientEntryConfig {
+	return model.ClientEntryConfig{
 		//ClientId:      client.Id,
-		ClientId:      strconv.Itoa(rand.Intn(9) + 1),
-		ServerAddress: client.ParentAddress,
+		ClientId:      int32(rand.Intn(9) + 1),
 		Epochs:        client.Epochs,
+		ServerAddress: client.ParentAddress,
 	}
 }
 

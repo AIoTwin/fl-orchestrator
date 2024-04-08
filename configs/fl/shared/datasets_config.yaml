@@ -1,4 +1,4 @@
-train_splits: 64
+train_splits: 20
 params:
   cifar10:
     name: &dataset_name 'cifar10'

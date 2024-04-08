@@ -77,7 +77,8 @@ func getOptimalConfigurationHierarchical(nodes []*model.Node, modelSize float32,
 	flAggregators := []*model.FlAggregator{}
 	flClients := []*model.FlClient{}
 
-	/* clients, aggregators := common.GetClientsAndAggregators(nodes)
+	// note: this is dummy example of clustering with 2 random nodes per cluster
+	clients, aggregators := common.GetClientsAndAggregators(nodes)
 	clusters := [][]*model.Node{}
 	for i := 0; i < len(clients); i = i + 2 {
 		cluster := []*model.Node{
@@ -105,12 +106,13 @@ func getOptimalConfigurationHierarchical(nodes []*model.Node, modelSize float32,
 			Port:            common.LOCAL_AGGREGATOR_PORT,
 			NumClients:      int32(len(cluster)),
 			Rounds:          common.LOCAL_AGGREGATOR_ROUNDS,
+			LocalRounds:     localRounds,
 			ParentAddress:   globalFlAggregator.ExternalAddress,
 		}
 		flAggregators = append(flAggregators, localFlAggregator)
-		flClientsCluster := common.ClientNodesToFlClients(cluster, localFlAggregator, 1)
+		flClientsCluster := common.ClientNodesToFlClients(cluster, localFlAggregator, epochs)
 		flClients = append(flClients, flClientsCluster...)
-	} */
+	}
 
 	return flClients, flAggregators, epochs, localRounds
 }

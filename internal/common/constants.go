@@ -1,9 +1,9 @@
 package common
 
 // Container images
-const FL_CLIENT_IMAGE = "cilicivan96/aiotwin-fl-client:1.0"
-const LOCAL_AGGRETATOR_IMAGE = "cilicivan96/aiotwin-fl-local-server:1.0"
-const GLOBAL_AGGRETATOR_IMAGE = "cilicivan96/aiotwin-fl-global-server:1.0"
+const FL_CLIENT_IMAGE = "cilicivan96/aiotwin-fl-client:0.2"
+const LOCAL_AGGRETATOR_IMAGE = "cilicivan96/aiotwin-fl-local-server:0.2"
+const GLOBAL_AGGRETATOR_IMAGE = "cilicivan96/aiotwin-fl-global-server:0.2"
 
 // FL Client configs
 const FL_CLIENT_DEPLOYMENT_PREFIX = "fl-cl"
