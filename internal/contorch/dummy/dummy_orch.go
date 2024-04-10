@@ -22,7 +22,10 @@ func NewDummyOrch(eventBus *events.EventBus) *DummyOrch {
 }
 
 func (orch *DummyOrch) GetAvailableNodes(initialRequest bool) (map[string]*model.Node, error) {
-	nodes := common.GetAvailableNodesFromFile()
+	nodes, err := common.GetAvailableNodesFromFile()
+	if err != nil {
+		return nil, err
+	}
 
 	if initialRequest {
 		orch.availableNodes = nodes

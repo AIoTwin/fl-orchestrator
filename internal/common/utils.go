@@ -10,13 +10,17 @@ import (
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 )
 
-func GetAvailableNodesFromFile() map[string]*model.Node {
+func GetAvailableNodesFromFile() (map[string]*model.Node, error) {
 	nodes := make(map[string]*model.Node)
 
 	records := ReadCsvFile("../../configs/cluster/cluster.csv")
 	for _, record := range records {
+		if len(record) != 3 {
+			return nil, fmt.Errorf("Incorrect CSV record: %v", record)
+		}
+
 		communicationCosts := make(map[string]float32)
-		commCostsSlice := strings.Split(record[3], ",")
+		commCostsSlice := strings.Split(record[2], ",")
 		for _, commCost := range commCostsSlice {
 			commCostSplited := strings.Split(commCost, ":")
 			if len(commCostSplited) == 2 {
@@ -27,16 +31,15 @@ func GetAvailableNodesFromFile() map[string]*model.Node {
 
 		node := &model.Node{
 			Id:                 record[0],
-			InternalIp:         record[1],
 			Resources:          model.NodeResources{},
-			FlType:             record[2],
+			FlType:             record[1],
 			CommunicationCosts: communicationCosts,
 		}
 
 		nodes[node.Id] = node
 	}
 
-	return nodes
+	return nodes, nil
 }
 
 func GetNodeStateChangeEvent(availableNodesCurrent map[string]*model.Node, availableNodesNew map[string]*model.Node) events.Event {

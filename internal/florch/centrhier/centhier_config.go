@@ -77,17 +77,30 @@ func getOptimalConfigurationHierarchical(nodes []*model.Node, modelSize float32,
 	flAggregators := []*model.FlAggregator{}
 	flClients := []*model.FlClient{}
 
-	// note: this is dummy example of clustering with 2 random nodes per cluster
+	// note: this is dummy example of clustering with equal distribution of clients per aggregator
 	clients, aggregators := common.GetClientsAndAggregators(nodes)
+	globalAggregator := aggregators[0]
+	localAggregators := aggregators[1:]
+
+	div := len(clients) / len(localAggregators)
+	mod := len(clients) % len(localAggregators)
 	clusters := [][]*model.Node{}
-	for i := 0; i < len(clients); i = i + 2 {
-		cluster := []*model.Node{
-			clients[i], clients[i+1],
+	lastClientIndex := 0
+	for i := 0; i < len(localAggregators); i++ {
+		var cluster []*model.Node
+		startIndex := lastClientIndex
+		var endIndex int
+		if i < mod {
+			endIndex = startIndex + div + 1
+		} else {
+			endIndex = startIndex + div
 		}
+		cluster = clients[startIndex:endIndex]
 		clusters = append(clusters, cluster)
+
+		lastClientIndex = endIndex
 	}
 
-	globalAggregator := aggregators[0]
 	globalFlAggregator := &model.FlAggregator{
 		Id:              globalAggregator.Id,
 		InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.GLOBAL_AGGREGATOR_PORT)),

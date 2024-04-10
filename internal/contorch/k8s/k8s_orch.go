@@ -67,7 +67,10 @@ func NewK8sOrchestrator(configFilePath string, eventBus *events.EventBus, simula
 
 func (orch *K8sOrchestrator) GetAvailableNodes(initialRequest bool) (map[string]*model.Node, error) {
 	if orch.simulation {
-		nodes := common.GetAvailableNodesFromFile()
+		nodes, err := common.GetAvailableNodesFromFile()
+		if err != nil {
+			return nil, err
+		}
 		if initialRequest {
 			for _, node := range nodes {
 				orch.availableNodes[node.Id] = node

@@ -9,7 +9,7 @@
           "type": "go",
           "request": "launch",
           "mode": "debug",
-          "program": "${workspaceFolder}/cmd/k8s_single/main.go",
+          "program": "${workspaceFolder}/cmd/k8s_simulated/main.go",
           "args": ["10", "600"]
         }
       ]    
