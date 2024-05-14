@@ -1,0 +1,35 @@
+device: 'cpu'
+
+trainer_config:
+train_config:
+train_dataset_id: 'cifar10/train'
+train_loader_params:
+  batch_size: 16
+  num_workers: 0
+  shuffle: True
+  pin_memory: True
+optimizer:
+  type: 'SGD'
+  params:
+    lr: 0.001
+#    momentum: 0.9
+#    weight_decay: 0.0001
+criterion:
+  type: 'CrossEntropyLoss'
+  params:
+    reduction: 'mean'
+
+validation_config:
+main_metric: 'Accuracy'
+eval_metrics: [ 'Accuracy' ]
+eval_dataset_id: 'cifar10/val'
+eval_loader_params:
+  batch_size: 1
+  num_workers: 0
+  shuffle: False
+  pin_memory: True
+
+
+config: [ '../example_client/logging_config.yaml',
+          '../example_client/model_config.yaml',
+          '../example_client/datasets_config.yaml' ]

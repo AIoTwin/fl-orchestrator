@@ -1,0 +1,5 @@
+zoo_or_custom_model_name: 'CNN3'
+model_args:
+  num_classes: 10
+random_seed: 11 #Set to -1 for non-determinism
+subset_strategy: "_flat_fair_2_classes"
