@@ -6,6 +6,7 @@ type Node struct {
 	Resources          NodeResources
 	FlType             string
 	CommunicationCosts map[string]float32 // destination node ID -> cost
+	DataDistribution   map[string]int64   // class ID -> number of samples
 }
 
 type NodeResources struct {

@@ -15,7 +15,7 @@ func GetAvailableNodesFromFile() (map[string]*model.Node, error) {
 
 	records := ReadCsvFile("../../configs/cluster/cluster.csv")
 	for _, record := range records {
-		if len(record) != 3 {
+		if len(record) != 4 {
 			return nil, fmt.Errorf("Incorrect CSV record: %v", record)
 		}
 
@@ -29,11 +29,22 @@ func GetAvailableNodesFromFile() (map[string]*model.Node, error) {
 			}
 		}
 
+		dataDistributions := make(map[string]int64)
+		dataDistributionsSlice := strings.Split(record[3], ",")
+		for _, dataDistribution := range dataDistributionsSlice {
+			dataDistributionSplited := strings.Split(dataDistribution, ":")
+			if len(dataDistributionSplited) == 2 {
+				samplesParsed, _ := strconv.Atoi(dataDistributionSplited[1])
+				dataDistributions[dataDistributionSplited[0]] = int64(samplesParsed)
+			}
+		}
+
 		node := &model.Node{
 			Id:                 record[0],
 			Resources:          model.NodeResources{},
 			FlType:             record[1],
 			CommunicationCosts: communicationCosts,
+			DataDistribution:   dataDistributions,
 		}
 
 		nodes[node.Id] = node

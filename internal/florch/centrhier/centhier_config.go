@@ -82,6 +82,10 @@ func getOptimalConfigurationHierarchical(nodes []*model.Node, modelSize float32,
 	globalAggregator := aggregators[0]
 	localAggregators := aggregators[1:]
 
+	if len(localAggregators) == 0 {
+		return flClients, flAggregators, epochs, localRounds
+	}
+
 	div := len(clients) / len(localAggregators)
 	mod := len(clients) % len(localAggregators)
 	clusters := [][]*model.Node{}

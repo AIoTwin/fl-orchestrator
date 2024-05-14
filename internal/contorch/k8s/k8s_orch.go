@@ -23,6 +23,7 @@ import (
 
 const flTypeLabel = "fl/type"
 const communicationCostPrefix = "comm/"
+const dataDistributionPrefix = "data/"
 
 type K8sOrchestrator struct {
 	config           *rest.Config
@@ -352,6 +353,7 @@ func nodeCoreToNodeModel(nodeCore corev1.Node, nodeMetric v1beta1.NodeMetrics) *
 
 	hostIP := getHostIp(nodeCore)
 
+	commCosts, dataDistribition := getCommCostsAndDataDistribution(nodeCore.Labels)
 	nodeModel := &model.Node{
 		Id:         nodeCore.Name,
 		InternalIp: hostIP,
@@ -360,7 +362,8 @@ func nodeCoreToNodeModel(nodeCore corev1.Node, nodeMetric v1beta1.NodeMetrics) *
 			RamUsage: memoryPercentage,
 		},
 		FlType:             getFlType(nodeCore.Labels),
-		CommunicationCosts: getCommunicationCosts(nodeCore.Labels),
+		CommunicationCosts: commCosts,
+		DataDistribution:   dataDistribition,
 	}
 
 	return nodeModel
@@ -371,8 +374,9 @@ func getFlType(labels map[string]string) string {
 	return flType
 }
 
-func getCommunicationCosts(labels map[string]string) map[string]float32 {
+func getCommCostsAndDataDistribution(labels map[string]string) (map[string]float32, map[string]int64) {
 	communicationCosts := make(map[string]float32)
+	dataDistribution := make(map[string]int64)
 	for key, value := range labels {
 		if strings.HasPrefix(key, communicationCostPrefix) {
 			splits := strings.Split(key, communicationCostPrefix)
@@ -380,10 +384,16 @@ func getCommunicationCosts(labels map[string]string) map[string]float32 {
 				cost, _ := strconv.ParseFloat(value, 32)
 				communicationCosts[splits[1]] = float32(cost)
 			}
+		} else if strings.HasPrefix(key, dataDistributionPrefix) {
+			splits := strings.Split(key, dataDistributionPrefix)
+			if len(splits) == 2 {
+				numberOfSamples, _ := strconv.Atoi(value)
+				dataDistribution[splits[1]] = int64(numberOfSamples)
+			}
 		}
 	}
 
-	return communicationCosts
+	return communicationCosts, dataDistribution
 }
 
 func getHostIp(node corev1.Node) string {
