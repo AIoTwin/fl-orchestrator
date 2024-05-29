@@ -23,3 +23,5 @@ go.work
 *__debug_bin
 
 configs/cluster/*
+
+.vscode/*
