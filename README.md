@@ -10,7 +10,9 @@
 
 ## Usage
 
+Example (model size 10, communication budget 600):
+
 ```bash
 cd cmd/k8s
-go run main.go
+go run main.go 10 600
 ```
