@@ -19,8 +19,9 @@ type FlOrchestrator struct {
 	modelSize           float32
 	communicationBudget float32
 	nodesMap            map[string]*model.Node
+	globalAggregator    *model.FlAggregator
+	localAggregators    []*model.FlAggregator
 	clients             []*model.FlClient
-	aggregators         []*model.FlAggregator
 }
 
 func NewFlOrchestrator(contOrch contorch.IContainerOrchestrator, flConfig IFlConfiguration, eventBus *events.EventBus,
@@ -41,10 +42,9 @@ func (orch *FlOrchestrator) Start() error {
 		orch.logger.Error(err.Error())
 		return err
 	}
-
 	orch.nodesMap = nodesMap
 
-	orch.deployFl()
+	orch.deployFl(false)
 
 	nodeStateChangeChan := make(chan events.Event)
 	orch.eventBus.Subscribe(common.NODE_STATE_CHANGE_EVENT_TYPE, nodeStateChangeChan)
@@ -59,34 +59,38 @@ func (orch *FlOrchestrator) Start() error {
 	return nil
 }
 
-func (orch *FlOrchestrator) deployFl() {
+func (orch *FlOrchestrator) deployFl(isReconfiguration bool) {
 	nodesArray := nodesMapToArray(orch.nodesMap)
 
-	clients, aggregators, epochs, localRounds := orch.flConfig.GetOptimalConfiguration(nodesArray, orch.modelSize, orch.communicationBudget)
+	globalAggregator, localAggregators, clients, epochs, localRounds := orch.flConfig.GetOptimalConfiguration(nodesArray, orch.modelSize, orch.communicationBudget)
 
+	orch.globalAggregator = globalAggregator
+	orch.localAggregators = localAggregators
 	orch.clients = clients
-	orch.aggregators = aggregators
 
+	fmt.Println("Global aggregator ::")
+	fmt.Printf("\t%+v\n", globalAggregator)
+	fmt.Println("Local aggregators ::")
+	for _, a := range localAggregators {
+		fmt.Printf("\t%+v\n", a)
+	}
 	fmt.Println("Clients ::")
 	for _, c := range clients {
 		fmt.Printf("\t%+v\n", c)
 	}
-	fmt.Println("Aggregators ::")
-	for _, a := range aggregators {
-		fmt.Printf("\t%+v\n", a)
-	}
 	fmt.Println("Epochs: ", epochs)
 	fmt.Println("Local rounds: ", localRounds)
 
-	for _, aggregator := range aggregators {
-		if aggregator.ParentAddress == "" {
-			orch.deployGlobalAggregator(aggregator)
-			time.Sleep(1 * time.Second)
-		} else {
-			orch.deployLocalAggregator(aggregator)
-			time.Sleep(1 * time.Second)
-		}
+	if !isReconfiguration {
+		orch.deployGlobalAggregator(globalAggregator)
+		time.Sleep(10 * time.Second)
 	}
+
+	for _, localAggregator := range localAggregators {
+		orch.deployLocalAggregator(localAggregator)
+		time.Sleep(1 * time.Second)
+	}
+	time.Sleep(10 * time.Second)
 
 	for _, client := range clients {
 		orch.deployFlClient(client)
@@ -94,17 +98,17 @@ func (orch *FlOrchestrator) deployFl() {
 	}
 }
 
-func (orch *FlOrchestrator) removeFl() {
+func (orch *FlOrchestrator) removeFl(isReconfiguration bool) {
 	for _, client := range orch.clients {
 		orch.contOrch.RemoveClient(client)
 	}
 
-	for _, aggregator := range orch.aggregators {
-		if aggregator.ParentAddress == "" {
-			orch.contOrch.RemoveGlobalAggregator(aggregator)
-		} else {
-			orch.contOrch.RemoveLocalAggregator(aggregator)
-		}
+	for _, localAggregator := range orch.localAggregators {
+		orch.contOrch.RemoveLocalAggregator(localAggregator)
+	}
+
+	if !isReconfiguration {
+		orch.contOrch.RemoveGlobalAggregator(orch.globalAggregator)
 	}
 }
 
@@ -198,13 +202,13 @@ func (orch *FlOrchestrator) nodeStateChangeHandler(eventChan <-chan events.Event
 			delete(orch.nodesMap, node.Id)
 		}
 
-		orch.removeFl()
+		orch.removeFl(true)
 
 		fmt.Println("Removed previous deployment and reconfiguring...")
 
 		time.Sleep(5 * time.Second)
 
-		orch.deployFl()
+		orch.deployFl(true)
 	}
 }
 

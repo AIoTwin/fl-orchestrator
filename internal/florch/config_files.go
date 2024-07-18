@@ -18,11 +18,16 @@ func BuildGlobalAggregatorConfigFiles(flAggregator *model.FlAggregator) (map[str
 	}
 	datasetsConfigString := string(datasetsConfigBytesArray)
 
+	loggingConfig := buildLoggingConfig(fmt.Sprintf("ga-%s", flAggregator.Id))
+	loggingConfigString, err := interfaceToYamlString(loggingConfig)
+	if err != nil {
+		fmt.Printf("Error while Marshaling. %v", err)
+	}
 	loggingConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "shared/logging_config.yaml"))
 	if err != nil {
 		fmt.Print(err)
 	}
-	loggingConfigString := string(loggingConfigBytesArray)
+	loggingConfigString = fmt.Sprintf("%s\n%s", loggingConfigString, string(loggingConfigBytesArray))
 
 	modelConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "shared/model_config.yaml"))
 	if err != nil {
@@ -67,11 +72,16 @@ func BuildLocalAggregatorConfigFiles(flAggregator *model.FlAggregator) (map[stri
 	}
 	datasetsConfigString := string(datasetsConfigBytesArray)
 
+	loggingConfig := buildLoggingConfig(fmt.Sprintf("la-%s", flAggregator.Id))
+	loggingConfigString, err := interfaceToYamlString(loggingConfig)
+	if err != nil {
+		fmt.Printf("Error while Marshaling. %v", err)
+	}
 	loggingConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "shared/logging_config.yaml"))
 	if err != nil {
 		fmt.Print(err)
 	}
-	loggingConfigString := string(loggingConfigBytesArray)
+	loggingConfigString = fmt.Sprintf("%s\n%s", loggingConfigString, string(loggingConfigBytesArray))
 
 	modelConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "shared/model_config.yaml"))
 	if err != nil {
@@ -116,11 +126,16 @@ func BuildClientConfigFiles(client *model.FlClient) (map[string]string, error) {
 	}
 	datasetsConfigString := string(datasetsConfigBytesArray)
 
+	loggingConfig := buildLoggingConfig(fmt.Sprintf("cl-%s", client.Id))
+	loggingConfigString, err := interfaceToYamlString(loggingConfig)
+	if err != nil {
+		fmt.Printf("Error while Marshaling. %v", err)
+	}
 	loggingConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "shared/logging_config.yaml"))
 	if err != nil {
 		fmt.Print(err)
 	}
-	loggingConfigString := string(loggingConfigBytesArray)
+	loggingConfigString = fmt.Sprintf("%s\n%s", loggingConfigString, string(loggingConfigBytesArray))
 
 	modelConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "shared/model_config.yaml"))
 	if err != nil {
@@ -180,6 +195,12 @@ func buildClientEntryConfigVarying(client *model.FlClient) model.ClientEntryConf
 		ClientId:      int32(rand.Intn(9) + 1),
 		Epochs:        client.Epochs,
 		ServerAddress: client.ParentAddress,
+	}
+}
+
+func buildLoggingConfig(runName string) model.LoggingConfig {
+	return model.LoggingConfig{
+		RunName: runName,
 	}
 }
 

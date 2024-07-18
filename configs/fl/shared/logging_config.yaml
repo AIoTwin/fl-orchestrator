@@ -1,7 +1,6 @@
 wandb_config:
-project: 'ivan_test_k3s'
+project: 'k8sreal_7nodes_v2'
 entity: 'aiotwins'
-run_name: 'example_run'
 enabled: True
 local_logging_config:
 log_file_path: 'logs/example/example.log'

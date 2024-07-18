@@ -19,3 +19,7 @@ type LocalAggregatorEntryConfig struct {
 	ParentAddress string `yaml:"parent_address"`
 	ServerAddress string `yaml:"server_address"`
 }
+
+type LoggingConfig struct {
+	RunName string `yaml:"run_name"`
+}

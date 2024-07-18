@@ -30,7 +30,8 @@ const LOCAL_AGGREGATOR_ROUNDS = 100
 
 // FL types
 const FL_TYPE_CLIENT = "client"
-const FL_TYPE_AGGREGATOR = "aggregator"
+const FL_TYPE_LOCAL_AGGREGATOR = "local_aggregator"
+const FL_TYPE_GLOBAL_AGGREGATOR = "global_aggregator"
 
 // Events
 const NODE_STATE_CHANGE_EVENT_TYPE = "NodeStateChanged"

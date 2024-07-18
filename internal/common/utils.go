@@ -87,18 +87,22 @@ func GetNodeStateChangeEvent(availableNodesCurrent map[string]*model.Node, avail
 	return event
 }
 
-func GetClientsAndAggregators(nodes []*model.Node) ([]*model.Node, []*model.Node) {
+func GetClientsAndAggregators(nodes []*model.Node) (*model.Node, []*model.Node, []*model.Node) {
 	clients := []*model.Node{}
-	aggregators := []*model.Node{}
+	localAggregators := []*model.Node{}
+	globalAggregator := &model.Node{}
 	for _, node := range nodes {
-		if node.FlType == FL_TYPE_AGGREGATOR {
-			aggregators = append(aggregators, node)
-		} else {
+		switch node.FlType {
+		case FL_TYPE_GLOBAL_AGGREGATOR:
+			globalAggregator = node
+		case FL_TYPE_LOCAL_AGGREGATOR:
+			localAggregators = append(localAggregators, node)
+		case FL_TYPE_CLIENT:
 			clients = append(clients, node)
 		}
 	}
 
-	return clients, aggregators
+	return globalAggregator, localAggregators, clients
 }
 
 func ClientNodesToFlClients(clients []*model.Node, flAggregator *model.FlAggregator, epochs int32) []*model.FlClient {

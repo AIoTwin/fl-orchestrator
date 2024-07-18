@@ -20,28 +20,28 @@ func NewCentrHierFlConfiguration() *CentrHierFlConfiguration {
 	return &CentrHierFlConfiguration{}
 }
 
-func (config *CentrHierFlConfiguration) GetOptimalConfiguration(nodes []*model.Node, modelSize float32, communicationBudget float32) ([]*model.FlClient,
-	[]*model.FlAggregator, int32, int32) {
+func (config *CentrHierFlConfiguration) GetOptimalConfiguration(nodes []*model.Node, modelSize float32, communicationBudget float32) (*model.FlAggregator,
+	[]*model.FlAggregator, []*model.FlClient, int32, int32) {
+	var globalAggregator *model.FlAggregator
+	var localAggregators []*model.FlAggregator
 	var clients []*model.FlClient
-	var aggregators []*model.FlAggregator
 	var epochs int32
 	var localRounds int32
 
-	_, potentialAggregators := common.GetClientsAndAggregators(nodes)
-	if len(potentialAggregators) == 1 {
-		clients, aggregators, epochs = getOptimalConfigurationCentralized(nodes, modelSize, communicationBudget)
+	_, potentialLocalAggregators, _ := common.GetClientsAndAggregators(nodes)
+	if len(potentialLocalAggregators) == 0 {
+		globalAggregator, clients, epochs = getOptimalConfigurationCentralized(nodes, modelSize, communicationBudget)
 	} else {
-		clients, aggregators, epochs, localRounds = config.getOptimalConfigurationHierarchical(nodes, modelSize, communicationBudget)
+		globalAggregator, localAggregators, clients, epochs, localRounds = config.getOptimalConfigurationHierarchical(nodes, modelSize, communicationBudget)
 	}
 
-	return clients, aggregators, epochs, localRounds
+	return globalAggregator, localAggregators, clients, epochs, localRounds
 }
 
-func getOptimalConfigurationCentralized(nodes []*model.Node, modelSize float32, communicationBudget float32) ([]*model.FlClient, []*model.FlAggregator,
+func getOptimalConfigurationCentralized(nodes []*model.Node, modelSize float32, communicationBudget float32) (*model.FlAggregator, []*model.FlClient,
 	int32) {
-	clients, aggregators := common.GetClientsAndAggregators(nodes)
+	globalAggregator, _, clients := common.GetClientsAndAggregators(nodes)
 
-	globalAggregator := aggregators[0]
 	aggregationCost, err := calculateAggregationCost(clients, globalAggregator.Id, modelSize)
 	if err != nil {
 		return nil, nil, 0
@@ -56,7 +56,7 @@ func getOptimalConfigurationCentralized(nodes []*model.Node, modelSize float32, 
 		}
 	}
 
-	flAggregator := &model.FlAggregator{
+	flGlobalAggregator := &model.FlAggregator{
 		Id:              globalAggregator.Id,
 		InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.GLOBAL_AGGREGATOR_PORT)),
 		ExternalAddress: common.GetGlobalAggregatorExternalAddress(globalAggregator.Id),
@@ -64,25 +64,21 @@ func getOptimalConfigurationCentralized(nodes []*model.Node, modelSize float32, 
 		NumClients:      int32(len(clients)),
 		Rounds:          common.GLOBAL_AGGREGATOR_ROUNDS,
 	}
-	flClients := common.ClientNodesToFlClients(clients, flAggregator, int32(minEpochs))
-	flAggregators := []*model.FlAggregator{
-		flAggregator,
-	}
+	flClients := common.ClientNodesToFlClients(clients, flGlobalAggregator, int32(minEpochs))
 
-	return flClients, flAggregators, minEpochs
+	return flGlobalAggregator, flClients, minEpochs
 }
 
-func (config *CentrHierFlConfiguration) getOptimalConfigurationHierarchical(nodes []*model.Node, modelSize float32, communicationBudget float32) ([]*model.FlClient, []*model.FlAggregator,
-	int32, int32) {
+func (config *CentrHierFlConfiguration) getOptimalConfigurationHierarchical(nodes []*model.Node, modelSize float32, communicationBudget float32) (
+	*model.FlAggregator, []*model.FlAggregator, []*model.FlClient, int32, int32) {
 	epochs := int32(1)
 	localRounds := int32(1)
-	flAggregators := []*model.FlAggregator{}
+	flGlobalAggregator := &model.FlAggregator{}
+	flLocalAggregators := []*model.FlAggregator{}
 	flClients := []*model.FlClient{}
 
 	// note: this is dummy example of clustering with equal distribution of clients per aggregator
-	clients, aggregators := common.GetClientsAndAggregators(nodes)
-	globalAggregator := aggregators[0]
-	localAggregators := aggregators[1:]
+	globalAggregator, localAggregators, clients := common.GetClientsAndAggregators(nodes)
 
 	config.BestClusters = make([][]*model.Node, 0)
 	config.AverageDistribution = make([]float64, 0)
@@ -135,17 +131,16 @@ func (config *CentrHierFlConfiguration) getOptimalConfigurationHierarchical(node
 	fmt.Println("Cost per epoch:", costPerEpoch)
 
 	// prepare clients and aggregators
-	globalFlAggregator := &model.FlAggregator{
+	flGlobalAggregator = &model.FlAggregator{
 		Id:              globalAggregator.Id,
 		InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.GLOBAL_AGGREGATOR_PORT)),
 		ExternalAddress: common.GetGlobalAggregatorExternalAddress(globalAggregator.Id),
 		Port:            common.GLOBAL_AGGREGATOR_PORT,
-		NumClients:      int32(len(aggregators) - 1),
+		NumClients:      int32(len(localAggregators)),
 		Rounds:          common.GLOBAL_AGGREGATOR_ROUNDS,
 	}
-	flAggregators = append(flAggregators, globalFlAggregator)
 	for n, cluster := range config.BestClusters {
-		localAggregator := aggregators[n+1]
+		localAggregator := localAggregators[n]
 		localFlAggregator := &model.FlAggregator{
 			Id:              localAggregator.Id,
 			InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.LOCAL_AGGREGATOR_PORT)),
@@ -154,14 +149,14 @@ func (config *CentrHierFlConfiguration) getOptimalConfigurationHierarchical(node
 			NumClients:      int32(len(cluster)),
 			Rounds:          common.LOCAL_AGGREGATOR_ROUNDS,
 			LocalRounds:     localRounds,
-			ParentAddress:   globalFlAggregator.ExternalAddress,
+			ParentAddress:   flGlobalAggregator.ExternalAddress,
 		}
-		flAggregators = append(flAggregators, localFlAggregator)
+		flLocalAggregators = append(flLocalAggregators, localFlAggregator)
 		flClientsCluster := common.ClientNodesToFlClients(cluster, localFlAggregator, epochs)
 		flClients = append(flClients, flClientsCluster...)
 	}
 
-	return flClients, flAggregators, epochs, localRounds
+	return flGlobalAggregator, flLocalAggregators, flClients, epochs, localRounds
 }
 
 func getHierarchicalAggregationCosts(globalAggregator *model.Node, localAggregators []*model.Node, clusters [][]*model.Node,
