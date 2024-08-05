@@ -19,7 +19,7 @@ func main() {
 
 	eventBus := events.NewEventBus()
 
-	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator("/home/ubuntu/.kube/config", eventBus, true)
+	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator("../../configs/cluster/kube_config.yaml", eventBus, true)
 	if err != nil {
 		logger.Error("Error while initializing k8s client ::", err.Error())
 		return
