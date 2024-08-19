@@ -1,6 +1,7 @@
 package florch
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -154,6 +155,11 @@ func BuildClientConfigFiles(client *model.FlClient) (map[string]string, error) {
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)
 	}
+	datasetListJson, err := interfaceToJsonString(clientEntryConfig.DatasetList)
+	if err != nil {
+		fmt.Printf("Error while Marshaling. %v", err)
+	}
+	clientEntryConfigString = fmt.Sprintf("%s\ndataset_list:\n  %s\n", clientEntryConfigString, datasetListJson)
 	clientEntryConfigBytesArray, err := os.ReadFile(fmt.Sprint(configDirectoryPath, "client/entry.yaml"))
 	if err != nil {
 		fmt.Print(err)
@@ -195,6 +201,7 @@ func buildClientEntryConfigVarying(client *model.FlClient) model.ClientEntryConf
 		ClientId:      int32(rand.Intn(9) + 1),
 		Epochs:        client.Epochs,
 		ServerAddress: client.ParentAddress,
+		DatasetList:   client.DataDistribution,
 	}
 }
 
@@ -211,4 +218,14 @@ func interfaceToYamlString(i interface{}) (string, error) {
 	}
 
 	return string(yamlData), nil
+}
+
+func interfaceToJsonString(i interface{}) (string, error) {
+	// Convert map to JSON
+	jsonData, err := json.Marshal(i)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonData), nil
 }

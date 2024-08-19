@@ -109,9 +109,10 @@ func ClientNodesToFlClients(clients []*model.Node, flAggregator *model.FlAggrega
 	flClients := []*model.FlClient{}
 	for _, client := range clients {
 		flClient := &model.FlClient{
-			Id:            client.Id,
-			ParentAddress: flAggregator.ExternalAddress,
-			Epochs:        epochs,
+			Id:               client.Id,
+			ParentAddress:    flAggregator.ExternalAddress,
+			Epochs:           epochs,
+			DataDistribution: client.DataDistribution,
 		}
 
 		flClients = append(flClients, flClient)

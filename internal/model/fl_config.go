@@ -1,9 +1,10 @@
 package model
 
 type ClientEntryConfig struct {
-	ClientId      int32  `yaml:"client_id"`
-	Epochs        int32  `yaml:"epochs"`
-	ServerAddress string `yaml:"server_address"`
+	ClientId      int32            `yaml:"client_id"`
+	Epochs        int32            `yaml:"epochs"`
+	ServerAddress string           `yaml:"server_address"`
+	DatasetList   map[string]int64 `yaml:"-"`
 }
 
 type GlobalAggregatorEntryConfig struct {
