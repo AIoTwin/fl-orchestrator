@@ -1,7 +1,7 @@
 package common
 
 // Container images
-const FL_CLIENT_IMAGE = "cilicivan96/aiotwin-fl-client:0.3"
+const FL_CLIENT_IMAGE = "cilicivan96/aiotwin-fl-client:0.4"
 const LOCAL_AGGRETATOR_IMAGE = "cilicivan96/aiotwin-fl-local-server:0.3"
 const GLOBAL_AGGRETATOR_IMAGE = "cilicivan96/aiotwin-fl-global-server:0.3"
 
@@ -9,6 +9,7 @@ const GLOBAL_AGGRETATOR_IMAGE = "cilicivan96/aiotwin-fl-global-server:0.3"
 const FL_CLIENT_DEPLOYMENT_PREFIX = "fl-cl"
 const FL_CLIENT_CONFIG_MOUNT_PATH = "/app/config/example_client/"
 const FL_CLIENT_CONFIG_MAP_NAME = "fl-cl-cm"
+const FL_CLIENT_CPU_REQUEST = 0.5
 
 // GA configs
 const GLOBAL_AGGRETATOR_DEPLOYMENT_NAME = "fl-ga"

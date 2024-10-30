@@ -7,7 +7,8 @@ import (
 	dummyorch "github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/contorch/dummy"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/events"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/florch"
-	centhier "github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/florch/centrhier"
+	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/florch/cost"
+	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/florch/flconfig"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -21,11 +22,20 @@ func main() {
 
 	dummyOrchestrator := dummyorch.NewDummyOrch(eventBus)
 
-	centHierConfig := centhier.NewCentrHierFlConfiguration()
-
 	modelSize, _ := strconv.ParseFloat(os.Args[1], 32)
 	communicationBudget, _ := strconv.ParseFloat(os.Args[2], 32)
-	flOrchestrator := florch.NewFlOrchestrator(dummyOrchestrator, centHierConfig, eventBus, logger, float32(modelSize), float32(communicationBudget))
+
+	costConfiguration := &cost.CostCofiguration{
+		CostType:            cost.TotalBudget_CostType,
+		CommunicationBudget: float32(communicationBudget),
+	}
+
+	flOrchestrator, err := florch.NewFlOrchestrator(dummyOrchestrator, eventBus, logger, flconfig.Cent_Hier_ConfigModelName,
+		-1, -1, float32(modelSize), costConfiguration, false)
+	if err != nil {
+		logger.Error("Error creating orchestrator", "error", err)
+		return
+	}
 
 	flOrchestrator.Start()
 }

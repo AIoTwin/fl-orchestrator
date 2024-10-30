@@ -7,6 +7,7 @@ import (
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -41,6 +42,16 @@ func BuildGlobalAggregatorDeployment(aggregator *model.FlAggregator) *appsv1.Dep
 								{
 									MountPath: common.GLOBAL_AGGRETATOR_MOUNT_PATH,
 									Name:      "gaconfig",
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1.0"),
+									corev1.ResourceMemory: resource.MustParse("1500Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1.0"),
+									corev1.ResourceMemory: resource.MustParse("1500Mi"),
 								},
 							},
 						},
@@ -99,6 +110,16 @@ func BuildLocalAggregatorDeployment(aggregator *model.FlAggregator) *appsv1.Depl
 									Name:      "laconfig",
 								},
 							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("0.5"),
+									corev1.ResourceMemory: resource.MustParse("1100Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("0.5"),
+									corev1.ResourceMemory: resource.MustParse("1100Mi"),
+								},
+							},
 						},
 					},
 					Volumes: []corev1.Volume{
@@ -148,6 +169,16 @@ func BuildClientDeployment(client *model.FlClient) *appsv1.Deployment {
 								{
 									MountPath: common.FL_CLIENT_CONFIG_MOUNT_PATH,
 									Name:      "clientconfig",
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1.0"),
+									corev1.ResourceMemory: resource.MustParse("900Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1.0"),
+									corev1.ResourceMemory: resource.MustParse("900Mi"),
 								},
 							},
 						},

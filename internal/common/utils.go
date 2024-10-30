@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -102,6 +103,15 @@ func GetClientsAndAggregators(nodes []*model.Node) (*model.Node, []*model.Node, 
 		}
 	}
 
+	sort.Slice(localAggregators, func(i, j int) bool {
+		compare := strings.Compare(localAggregators[i].Id, localAggregators[j].Id)
+		if compare == -1 {
+			return true
+		} else {
+			return false
+		}
+	})
+
 	return globalAggregator, localAggregators, clients
 }
 
@@ -111,6 +121,7 @@ func ClientNodesToFlClients(clients []*model.Node, flAggregator *model.FlAggrega
 		flClient := &model.FlClient{
 			Id:               client.Id,
 			ParentAddress:    flAggregator.ExternalAddress,
+			ParentNodeId:     flAggregator.Id,
 			Epochs:           epochs,
 			DataDistribution: client.DataDistribution,
 		}
@@ -119,6 +130,16 @@ func ClientNodesToFlClients(clients []*model.Node, flAggregator *model.FlAggrega
 	}
 
 	return flClients
+}
+
+func GetClientInArray(clients []*model.FlClient, clientId string) *model.FlClient {
+	for _, client := range clients {
+		if client.Id == clientId {
+			return client
+		}
+	}
+
+	return &model.FlClient{}
 }
 
 func GetGlobalAggregatorServiceName(aggregatorId string) string {

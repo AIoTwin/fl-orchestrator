@@ -3,6 +3,7 @@ package model
 type FlClient struct {
 	Id               string
 	ParentAddress    string
+	ParentNodeId     string
 	Epochs           int32
 	DataDistribution map[string]int64
 }

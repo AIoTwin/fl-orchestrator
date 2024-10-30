@@ -1,0 +1,42 @@
+package main
+
+import (
+	"os"
+
+	k8sorch "github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/contorch/k8s"
+	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/events"
+	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/server"
+	"github.com/gorilla/mux"
+	"github.com/hashicorp/go-hclog"
+)
+
+func main() {
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:  "fl-orch",
+		Level: hclog.LevelFromString("DEBUG"),
+	})
+
+	eventBus := events.NewEventBus()
+
+	simulation := false
+	if len(os.Args) == 2 {
+		deplType := os.Args[1]
+		if deplType == "sim" {
+			simulation = true
+		}
+	}
+
+	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator("../../configs/cluster/kube_config.yaml", eventBus, simulation)
+	if err != nil {
+		logger.Error("Error while initializing k8s client ::", err.Error())
+		return
+	}
+
+	handler := server.NewHandler(logger, eventBus, k8sOrchestrator)
+
+	defaultRouter := mux.NewRouter()
+	defaultRouter.HandleFunc("/fl/start", handler.StartFl)
+	defaultRouter.HandleFunc("/fl/stop/{runId}", handler.StopFl)
+
+	server.StartHttpServer(logger, defaultRouter)
+}

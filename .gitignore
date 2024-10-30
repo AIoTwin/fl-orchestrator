@@ -25,3 +25,5 @@ go.work
 configs/cluster/*
 
 .vscode/*
+
+experiments/results/*
