@@ -11,11 +11,11 @@ type PerformancePrediction struct {
 	regressionFunctionLosses     Regression
 }
 
-func NewPerformancePrediction(accuracies []float32, losses []float32, predictionType string) *PerformancePrediction {
+func NewPerformancePrediction(accuracies []float32, losses []float32, predictionType string, offset int) *PerformancePrediction {
 	pp := &PerformancePrediction{}
 
-	accXs, accYs := prepareXAndY(accuracies)
-	lossXs, lossYs := prepareXAndY(losses)
+	accXs, accYs := prepareXAndY(accuracies, offset)
+	lossXs, lossYs := prepareXAndY(losses, offset)
 
 	if predictionType == LogarithmicRegression_PredictionType {
 		pp.regressionFunctionAccuracies = NewLogarithmicRegression(accXs, accYs)
@@ -51,12 +51,12 @@ func (pp *PerformancePrediction) PrintPrediction() string {
 	return pp.regressionFunctionAccuracies.PrintFunction()
 }
 
-func prepareXAndY(accuracies []float32) ([]float64, []float64) {
+func prepareXAndY(accuracies []float32, offset int) ([]float64, []float64) {
 	xs := make([]float64, len(accuracies))
 	ys := make([]float64, len(accuracies))
 
 	for i, accuracy := range accuracies {
-		xs[i] = float64(i)
+		xs[i] = float64(i + 1 + offset)
 		ys[i] = float64(accuracy)
 	}
 

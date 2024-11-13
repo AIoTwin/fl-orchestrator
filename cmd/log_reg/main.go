@@ -54,7 +54,7 @@ func PredictXForY(a, b, y float64) float64 {
 }
 
 func main() {
-	records := common.ReadCsvFile("../../experiments/results/test.csv")
+	records := common.ReadCsvFile("./test.csv")
 
 	// Initialize slices for the first two columns
 	xs := make([]float64, len(records))
@@ -73,7 +73,7 @@ func main() {
 	fmt.Printf("Logarithmic coefficients: a = %.3f, b = %.3f\n", a, b)
 
 	// Predict a value for x = 20
-	predictX := 52.0
+	predictX := 57.0
 	predictY := PredictLogarithmic(a, b, predictX)
 
 	fmt.Printf("Predicted value at x=%.2f: %.2f\n", predictX, predictY)

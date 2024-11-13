@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 
 	k8sorch "github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/contorch/k8s"
@@ -11,9 +12,20 @@ import (
 )
 
 func main() {
+	logFile, err := os.OpenFile("log/e6_rva-40.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := logFile.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  "fl-orch",
-		Level: hclog.LevelFromString("DEBUG"),
+		Name:   "fl-orch",
+		Level:  hclog.LevelFromString("DEBUG"),
+		Output: io.MultiWriter(os.Stdout, logFile),
 	})
 
 	eventBus := events.NewEventBus()

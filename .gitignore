@@ -26,4 +26,6 @@ configs/cluster/*
 
 .vscode/*
 
-experiments/results/*
+experiments/*
+
+cmd/http/log/*

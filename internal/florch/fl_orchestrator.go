@@ -84,7 +84,7 @@ func (orch *FlOrchestrator) Start() error {
 
 	// set cofiguration and deploy FL
 	orch.configuration = orch.configurationModel.GetOptimalConfiguration(nodesMapToArray(orch.nodesMap))
-	printConfiguration(orch.configuration)
+	orch.printConfiguration()
 	orch.deployFl()
 
 	orch.progress = &FlProgress{
@@ -145,7 +145,7 @@ func (orch *FlOrchestrator) removeFl() {
 
 func (orch *FlOrchestrator) reconfigure(newConfiguration *flconfig.FlConfiguration) {
 	orch.logger.Info("Starting reconfiguration:")
-	printConfiguration(newConfiguration)
+	orch.printConfiguration()
 
 	oldConfiguration := orch.configuration
 
@@ -285,7 +285,7 @@ func (orch *FlOrchestrator) runReconfigurationModel() {
 			roundsRemainingNew := math.Floor(float64((budgetRemaning - reconfigurationChangeCost) / newConfigCost))
 			if roundsRemainingNew < roundsRemainingCurrent {
 				ppCurrent := performance.NewPerformancePrediction(orch.progress.accuracies, orch.progress.losses,
-					performance.LogarithmicRegression_PredictionType)
+					performance.LogarithmicRegression_PredictionType, 0)
 				orch.reconfigurationEvaluator = &ReconfigurationEvaluator{
 					isActive:          true,
 					evaluationRound:   finishedGlobalRound + ReconfEvalWindow,
@@ -303,7 +303,7 @@ func (orch *FlOrchestrator) runReconfigurationModel() {
 			}
 		} else if orch.costConfiguration.CostType == cost.CostMinimization_CostType {
 			ppCurrent := performance.NewPerformancePrediction(orch.progress.accuracies, orch.progress.losses,
-				performance.LogarithmicRegression_PredictionType)
+				performance.LogarithmicRegression_PredictionType, 0)
 			roundPredicted := ppCurrent.PredictRoundForAccuracy(orch.costConfiguration.TargetAccuracy)
 			roundsRemainingCurrent := float32(roundPredicted - finishedGlobalRound)
 			costRemainingCurrent := float32(roundsRemainingCurrent) * orch.progress.costPerGlobalRound
@@ -407,22 +407,26 @@ func (orch *FlOrchestrator) monitorFlProgress() {
 	}
 }
 
-// HELPERS
+func (orch *FlOrchestrator) printConfiguration() {
+	configToPrint := ""
 
-func printConfiguration(configuration *flconfig.FlConfiguration) {
-	fmt.Println("Global aggregator ::")
-	fmt.Printf("\t%+v\n", configuration.GlobalAggregator)
-	fmt.Println("Local aggregators ::")
-	for _, a := range configuration.LocalAggregators {
-		fmt.Printf("\t%+v\n", a)
+	configToPrint += fmt.Sprintln("Global aggregator ::")
+	configToPrint += fmt.Sprintf("\t%+v\n", orch.configuration.GlobalAggregator)
+	configToPrint += fmt.Sprintln("Local aggregators ::")
+	for _, a := range orch.configuration.LocalAggregators {
+		configToPrint += fmt.Sprintf("\t%+v\n", a)
 	}
-	fmt.Println("Clients ::")
-	for _, c := range configuration.Clients {
-		fmt.Printf("\t%+v\n", c)
+	configToPrint += fmt.Sprintln("Clients ::")
+	for _, c := range orch.configuration.Clients {
+		configToPrint += fmt.Sprintf("\t%+v\n", c)
 	}
-	fmt.Println("Epochs: ", configuration.Epochs)
-	fmt.Println("Local rounds: ", configuration.LocalRounds)
+	configToPrint += fmt.Sprintln("Epochs: ", orch.configuration.Epochs)
+	configToPrint += fmt.Sprintln("Local rounds: ", orch.configuration.LocalRounds)
+
+	orch.logger.Info(configToPrint)
 }
+
+// HELPERS
 
 func getLatestAccuracyFromLogs(logs string) float32 {
 	pattern := `\{'accuracy': ([0-9]*\.[0-9]+)\}`
