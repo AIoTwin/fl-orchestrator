@@ -11,7 +11,7 @@ import (
 func main() {
 	numClasses := 10
 	numClients := 10
-	samplesPerClass := 1000
+	samplesPerClass := 5000
 	alpha := 0.5 // Adjust this for more/less non-IID
 
 	// Seed random for consistent results
@@ -82,9 +82,9 @@ func writeInitialClusterCSV(filename string, clientDistributions [][]int) error 
 
 		commCosts := ""
 		if i < 4 {
-			commCosts = "n1:120,n2:20,n3:60"
+			commCosts = "n1:120,n2:40,n3:60"
 		} else {
-			commCosts = "n1:120,n2:60,n3:20"
+			commCosts = "n1:120,n2:60,n3:40"
 		}
 
 		classCounts := ""

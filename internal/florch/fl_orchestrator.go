@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ type FlOrchestrator struct {
 	logger                   hclog.Logger
 	resultsFileName          string
 	nodesMap                 map[string]*model.Node
+	flEntities               *model.FlEntities
 	configuration            *flconfig.FlConfiguration
 	modelSize                float32
 	costConfiguration        *cost.CostCofiguration
@@ -82,9 +84,20 @@ func (orch *FlOrchestrator) Start() error {
 	}
 	orch.nodesMap = nodesMap
 
+	orch.flEntities = &model.FlEntities{}
+	orch.flEntities.GlobalAggregator, orch.flEntities.LocalAggregators,
+		orch.flEntities.Clients = common.GetClientsAndAggregators(nodesMapToArray(orch.nodesMap))
+
 	// set cofiguration and deploy FL
-	orch.configuration = orch.configurationModel.GetOptimalConfiguration(nodesMapToArray(orch.nodesMap))
+	orch.configuration = orch.configurationModel.GetOptimalConfiguration(orch.flEntities)
+
+	orch.calculateDatasetBasedScores()
+	sort.Slice(orch.flEntities.Clients, func(i, j int) bool {
+		return orch.flEntities.Clients[i].ClientUtility.DataDistributionScore < orch.flEntities.Clients[j].ClientUtility.DataDistributionScore
+	})
+
 	orch.printConfiguration()
+
 	orch.deployFl()
 
 	orch.progress = &FlProgress{
@@ -116,31 +129,31 @@ func (orch *FlOrchestrator) Stop() {
 }
 
 func (orch *FlOrchestrator) deployFl() {
-	orch.deployGlobalAggregator(orch.configuration.GlobalAggregator)
+	orch.deployGlobalAggregator(orch.configuration.FlEntities.GlobalAggregator)
 	time.Sleep(10 * time.Second)
 
-	for _, localAggregator := range orch.configuration.LocalAggregators {
+	for _, localAggregator := range orch.configuration.FlEntities.LocalAggregators {
 		orch.deployLocalAggregator(localAggregator)
 		time.Sleep(1 * time.Second)
 	}
 	time.Sleep(10 * time.Second)
 
-	for _, client := range orch.configuration.Clients {
+	for _, client := range orch.configuration.FlEntities.Clients {
 		orch.deployFlClient(client)
 		time.Sleep(1 * time.Second)
 	}
 }
 
 func (orch *FlOrchestrator) removeFl() {
-	for _, client := range orch.configuration.Clients {
+	for _, client := range orch.configuration.FlEntities.Clients {
 		orch.contOrch.RemoveClient(client)
 	}
 
-	for _, localAggregator := range orch.configuration.LocalAggregators {
+	for _, localAggregator := range orch.configuration.FlEntities.LocalAggregators {
 		orch.contOrch.RemoveLocalAggregator(localAggregator)
 	}
 
-	orch.contOrch.RemoveGlobalAggregator(orch.configuration.GlobalAggregator)
+	orch.contOrch.RemoveGlobalAggregator(orch.configuration.FlEntities.GlobalAggregator)
 }
 
 func (orch *FlOrchestrator) reconfigure(newConfiguration *flconfig.FlConfiguration) {
@@ -149,8 +162,8 @@ func (orch *FlOrchestrator) reconfigure(newConfiguration *flconfig.FlConfigurati
 
 	oldConfiguration := orch.configuration
 
-	for _, oldClient := range oldConfiguration.Clients {
-		newClient := common.GetClientInArray(newConfiguration.Clients, oldClient.Id)
+	for _, oldClient := range oldConfiguration.FlEntities.Clients {
+		newClient := common.GetClientInArray(newConfiguration.FlEntities.Clients, oldClient.Id)
 		if (newClient == &model.FlClient{}) {
 			orch.contOrch.RemoveClient(oldClient)
 			orch.logger.Info(fmt.Sprintf("Removed client: %s", oldClient.Id))
@@ -163,8 +176,8 @@ func (orch *FlOrchestrator) reconfigure(newConfiguration *flconfig.FlConfigurati
 	time.Sleep(5 * time.Second)
 	orch.logger.Info("Deploying new configuration...")
 
-	for _, newClient := range newConfiguration.Clients {
-		oldClient := common.GetClientInArray(oldConfiguration.Clients, newClient.Id)
+	for _, newClient := range newConfiguration.FlEntities.Clients {
+		oldClient := common.GetClientInArray(oldConfiguration.FlEntities.Clients, newClient.Id)
 		if (oldClient == &model.FlClient{}) {
 			orch.deployFlClient(newClient)
 		} else if oldClient.ParentAddress != newClient.ParentAddress {
@@ -269,10 +282,10 @@ func (orch *FlOrchestrator) nodeStateChangeHandler(eventChan <-chan events.Event
 func (orch *FlOrchestrator) runReconfigurationModel() {
 	finishedGlobalRound := orch.progress.globalRound - 2
 
-	newConfiguration := orch.configurationModel.GetOptimalConfiguration(nodesMapToArray(orch.nodesMap))
-	newConfigCost := cost.GetGlobalRoundCost(newConfiguration, orch.nodesMap, orch.modelSize)
+	newConfiguration := orch.configurationModel.GetOptimalConfiguration(orch.flEntities)
+	newConfigCost := cost.GetGlobalRoundCost(newConfiguration, orch.modelSize)
 
-	reconfigurationChangeCost := cost.GetReconfigurationChangeCost(orch.configuration, newConfiguration, orch.nodesMap, orch.modelSize)
+	reconfigurationChangeCost := cost.GetReconfigurationChangeCost(orch.configuration, newConfiguration, orch.modelSize)
 	orch.logger.Info(fmt.Sprintf("Reconfiguration change cost: %.2f", reconfigurationChangeCost))
 
 	postReconfigurationCost := newConfigCost - orch.progress.costPerGlobalRound
@@ -336,6 +349,7 @@ func (orch *FlOrchestrator) monitorFlProgress() {
 		logsBuffer, err := orch.contOrch.GetGlobalAggregatorLogs()
 		if err != nil {
 			orch.logger.Error(fmt.Sprintf("Error while obtaining GA logs: %s", err.Error()))
+			time.Sleep(5 * time.Second)
 			continue
 		}
 
@@ -353,7 +367,7 @@ func (orch *FlOrchestrator) monitorFlProgress() {
 			orch.progress.losses = append(orch.progress.losses, loss)
 			orch.logger.Info(fmt.Sprintf("Latest loss: %.2f", loss))
 
-			orch.progress.costPerGlobalRound = cost.GetGlobalRoundCost(orch.configuration, orch.nodesMap, orch.modelSize)
+			orch.progress.costPerGlobalRound = cost.GetGlobalRoundCost(orch.configuration, orch.modelSize)
 
 			if finishedGlobalRound > 0 {
 				orch.logger.Info(fmt.Sprintf("Cost per global round: %.2f", orch.progress.costPerGlobalRound))
@@ -395,15 +409,45 @@ func (orch *FlOrchestrator) monitorFlProgress() {
 				}
 			}
 
+			if finishedGlobalRound > 0 {
+				orch.updateModelDifference()
+
+				sort.Slice(orch.flEntities.Clients, func(i, j int) bool {
+					return orch.flEntities.Clients[i].ClientUtility.ModelDifferenceScore < orch.flEntities.Clients[j].ClientUtility.ModelDifferenceScore
+				})
+
+				clientsSortedPrint := fmt.Sprintln("Clients sorted by difference ascending ::")
+				for _, c := range orch.flEntities.Clients {
+					clientsSortedPrint += fmt.Sprintf("\t%s: distr=%.5f diff)%.5f\n", c.Id, c.ClientUtility.DataDistributionScore,
+						c.ClientUtility.ModelDifferenceScore)
+				}
+
+				orch.logger.Info(clientsSortedPrint)
+			}
+
 			if finishedGlobalRound == 10 {
-				orch.logger.Info("Applying changes...")
-				applyChanges("../../configs/cluster/cluster.csv", "../../configs/cluster/changes.csv")
+				/* orch.logger.Info("Applying changes...")
+				applyChanges("../../configs/cluster/cluster.csv", "../../configs/cluster/changes.csv") */
+
+				/* lowestDifferenceClient := orch.flEntities.Clients[0]
+				secondLowestDifferenceClient := orch.flEntities.Clients[1]
+				newFlClients := []*model.FlClient{}
+				for _, client := range orch.flEntities.Clients {
+					if client.Id == lowestDifferenceClient.Id || client.Id == secondLowestDifferenceClient.Id {
+						continue
+					}
+					newFlClients = append(newFlClients, client)
+				}
+
+				orch.flEntities.Clients = newFlClients
+
+				orch.runReconfigurationModel() */
 			}
 
 			orch.progress.globalRound++
 		}
 
-		time.Sleep(20 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 }
 
@@ -411,13 +455,13 @@ func (orch *FlOrchestrator) printConfiguration() {
 	configToPrint := ""
 
 	configToPrint += fmt.Sprintln("Global aggregator ::")
-	configToPrint += fmt.Sprintf("\t%+v\n", orch.configuration.GlobalAggregator)
+	configToPrint += fmt.Sprintf("\t%+v\n", orch.configuration.FlEntities.GlobalAggregator)
 	configToPrint += fmt.Sprintln("Local aggregators ::")
-	for _, a := range orch.configuration.LocalAggregators {
+	for _, a := range orch.configuration.FlEntities.LocalAggregators {
 		configToPrint += fmt.Sprintf("\t%+v\n", a)
 	}
 	configToPrint += fmt.Sprintln("Clients ::")
-	for _, c := range orch.configuration.Clients {
+	for _, c := range orch.configuration.FlEntities.Clients {
 		configToPrint += fmt.Sprintf("\t%+v\n", c)
 	}
 	configToPrint += fmt.Sprintln("Epochs: ", orch.configuration.Epochs)

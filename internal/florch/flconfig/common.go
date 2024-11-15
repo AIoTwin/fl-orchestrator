@@ -9,7 +9,52 @@ import (
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 )
 
-func validPartition(clusters [][]*model.Node, clusterSizes []int) bool {
+func copyFlEntitites(srcFlEntities *model.FlEntities) *model.FlEntities {
+	localAggregators := []*model.FlAggregator{}
+	clients := []*model.FlClient{}
+
+	for _, la := range srcFlEntities.LocalAggregators {
+		localAggregators = append(localAggregators, copyFlAggregator(la))
+	}
+
+	for _, cl := range srcFlEntities.Clients {
+		clients = append(clients, copyFlClient(cl))
+	}
+
+	return &model.FlEntities{
+		GlobalAggregator: copyFlAggregator(srcFlEntities.GlobalAggregator),
+		LocalAggregators: localAggregators,
+		Clients:          clients,
+	}
+}
+
+func copyFlAggregator(srcGlobalAggregator *model.FlAggregator) *model.FlAggregator {
+	return &model.FlAggregator{
+		Id:                 srcGlobalAggregator.Id,
+		InternalAddress:    srcGlobalAggregator.InternalAddress,
+		ExternalAddress:    srcGlobalAggregator.ExternalAddress,
+		ParentAddress:      srcGlobalAggregator.ParentAddress,
+		Port:               srcGlobalAggregator.Port,
+		NumClients:         srcGlobalAggregator.NumClients,
+		Rounds:             srcGlobalAggregator.Rounds,
+		LocalRounds:        srcGlobalAggregator.LocalRounds,
+		CommunicationCosts: srcGlobalAggregator.CommunicationCosts,
+	}
+}
+
+func copyFlClient(srcFlClient *model.FlClient) *model.FlClient {
+	return &model.FlClient{
+		Id:                 srcFlClient.Id,
+		ParentAddress:      srcFlClient.ParentAddress,
+		ParentNodeId:       srcFlClient.ParentNodeId,
+		Epochs:             srcFlClient.Epochs,
+		CommunicationCosts: srcFlClient.CommunicationCosts,
+		DataDistribution:   srcFlClient.DataDistribution,
+		ClientUtility:      srcFlClient.ClientUtility,
+	}
+}
+
+func validPartition(clusters [][]*model.FlClient, clusterSizes []int) bool {
 	for i, cluster := range clusters {
 		if len(cluster) != clusterSizes[i] {
 			return false
@@ -18,7 +63,7 @@ func validPartition(clusters [][]*model.Node, clusterSizes []int) bool {
 	return true
 }
 
-func printClusters(clusters [][]*model.Node) {
+func printClusters(clusters [][]*model.FlClient) {
 	for _, cluster := range clusters {
 		fmt.Print("[")
 		for i, node := range cluster {
@@ -32,27 +77,25 @@ func printClusters(clusters [][]*model.Node) {
 	fmt.Println()
 }
 
-func getTotalKld(clusters [][]*model.Node, averageDistribution []float64) float64 {
+func getTotalKld(clusters [][]*model.FlClient, averageDistribution []float64) float64 {
 	klds := make([]float64, len(clusters))
 	for i, cluster := range clusters {
 		clusterDataDistribution := getClusterDataDistribution(cluster)
 		klds[i] = klDivergence(clusterDataDistribution, averageDistribution)
 	}
 
-	return calculateAverage(klds)
+	return common.CalculateAverageFloat64(klds)
 }
 
-func getClusterDataDistribution(nodes []*model.Node) []float64 {
+func getClusterDataDistribution(clients []*model.FlClient) []float64 {
 	totalSamples := 0
 	samplesPerClass := make([]int64, 10)
-	for _, node := range nodes {
-		if node.FlType == common.FL_TYPE_CLIENT {
-			dataDistribution := node.DataDistribution
-			for class, samples := range dataDistribution {
-				i, _ := strconv.Atoi(class)
-				samplesPerClass[i] += samples
-				totalSamples += int(samples)
-			}
+	for _, client := range clients {
+		dataDistribution := client.DataDistribution
+		for class, samples := range dataDistribution {
+			i, _ := strconv.Atoi(class)
+			samplesPerClass[i] += samples
+			totalSamples += int(samples)
 		}
 	}
 
@@ -83,29 +126,16 @@ func klDivergence(p, q []float64) float64 {
 	return klDiv
 }
 
-func calculateAverage(numbers []float64) float64 {
-	if len(numbers) == 0 {
-		return 0
-	}
-
-	var sum float64
-	for _, number := range numbers {
-		sum += number
-	}
-
-	return sum / float64(len(numbers))
-}
-
-func getHierarchicalAggregationCosts(globalAggregator *model.Node, localAggregators []*model.Node, clusters [][]*model.Node,
+func getHierarchicalAggregationCosts(globalAggregator *model.FlAggregator, localAggregators []*model.FlAggregator, clusters [][]*model.FlClient,
 	modelSize float32) (float32, float32, error) {
-	globalAggregationCost, err := calculateAggregationCost(localAggregators, globalAggregator.Id, modelSize)
+	globalAggregationCost, err := calculateGlobalAggregationCost(localAggregators, globalAggregator.Id, modelSize)
 	if err != nil {
 		return 0.0, 0.0, nil
 	}
 
 	localAggregationCost := float32(0)
 	for i, cluster := range clusters {
-		clusterAggregationCost, err := calculateAggregationCost(cluster, localAggregators[i].Id, modelSize)
+		clusterAggregationCost, err := calculateLocalAggregationCost(cluster, localAggregators[i].Id, modelSize)
 		if err != nil {
 			return 0.0, 0.0, nil
 		}
@@ -116,13 +146,13 @@ func getHierarchicalAggregationCosts(globalAggregator *model.Node, localAggregat
 	return globalAggregationCost, localAggregationCost, nil
 }
 
-func calculateAggregationCost(clients []*model.Node, aggregatorNodeId string, modelSize float32) (float32, error) {
+func calculateLocalAggregationCost(clients []*model.FlClient, localAggregatorNodeId string, modelSize float32) (float32, error) {
 	aggregationCost := float32(0.0)
 	for _, client := range clients {
 		communicationCosts := client.CommunicationCosts
-		cost, exists := communicationCosts[aggregatorNodeId]
+		cost, exists := communicationCosts[localAggregatorNodeId]
 		if !exists {
-			return 0.0, fmt.Errorf("no comm cost value from client %s to aggregator %s", client.Id, aggregatorNodeId)
+			return 0.0, fmt.Errorf("no comm cost value from client %s to aggregator %s", client.Id, localAggregatorNodeId)
 		}
 		aggregationCost += cost * modelSize
 	}
@@ -130,13 +160,27 @@ func calculateAggregationCost(clients []*model.Node, aggregatorNodeId string, mo
 	return aggregationCost, nil
 }
 
-func (config *CentrHierFlConfiguration) partitionClients(clients []*model.Node, index int, clusters [][]*model.Node, clusterSizes []int) {
+func calculateGlobalAggregationCost(localAggregators []*model.FlAggregator, globalAggregatorNodeId string, modelSize float32) (float32, error) {
+	aggregationCost := float32(0.0)
+	for _, localAggregator := range localAggregators {
+		communicationCosts := localAggregator.CommunicationCosts
+		cost, exists := communicationCosts[globalAggregatorNodeId]
+		if !exists {
+			return 0.0, fmt.Errorf("no comm cost value from LA %s to GA %s", localAggregator.Id, globalAggregatorNodeId)
+		}
+		aggregationCost += cost * modelSize
+	}
+
+	return aggregationCost, nil
+}
+
+func (config *CentrHierFlConfiguration) partitionClients(clients []*model.FlClient, index int, clusters [][]*model.FlClient, clusterSizes []int) {
 	if index == len(clients) {
 		if validPartition(clusters, clusterSizes) {
 			kld := getTotalKld(clusters, config.averageDistribution)
 			if kld < config.bestKld {
 				config.bestKld = kld
-				config.bestClusters = make([][]*model.Node, len(clusters))
+				config.bestClusters = make([][]*model.FlClient, len(clusters))
 				copy(config.bestClusters, clusters)
 			}
 		}
@@ -145,7 +189,7 @@ func (config *CentrHierFlConfiguration) partitionClients(clients []*model.Node, 
 
 	for i := 0; i < len(clusters); i++ {
 		if len(clusters[i]) < clusterSizes[i] {
-			newClusters := make([][]*model.Node, len(clusters))
+			newClusters := make([][]*model.FlClient, len(clusters))
 			copy(newClusters, clusters)
 			newClusters[i] = append(newClusters[i], clients[index])
 			config.partitionClients(clients, index+1, newClusters, clusterSizes)

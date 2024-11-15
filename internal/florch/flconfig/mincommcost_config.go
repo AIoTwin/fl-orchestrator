@@ -9,13 +9,12 @@ import (
 )
 
 type MinimizeCommCostConfiguration struct {
-	epochs               int32
-	localRounds          int32
-	modelSize            float32
-	bestClusters         [][]*model.Node
-	bestCommCost         float32
-	globalAgregatorNode  *model.Node
-	localAggregatorNodes []*model.Node
+	epochs       int32
+	localRounds  int32
+	modelSize    float32
+	bestClusters [][]*model.FlClient
+	bestCommCost float32
+	flEntities   *model.FlEntities
 }
 
 func NewMinimizeCommCostConfiguration(epochs int32, localRounds int32, modelSize float32) *MinimizeCommCostConfiguration {
@@ -26,44 +25,29 @@ func NewMinimizeCommCostConfiguration(epochs int32, localRounds int32, modelSize
 	}
 }
 
-func (config *MinimizeCommCostConfiguration) GetOptimalConfiguration(nodes []*model.Node) *FlConfiguration {
-	flGlobalAggregator := &model.FlAggregator{}
-	flLocalAggregators := []*model.FlAggregator{}
-	flClients := []*model.FlClient{}
+func (config *MinimizeCommCostConfiguration) GetOptimalConfiguration(flEntitiesInitial *model.FlEntities) *FlConfiguration {
+	config.flEntities = copyFlEntitites(flEntitiesInitial)
 
-	globalAggregator, localAggregators, clients := common.GetClientsAndAggregators(nodes)
-
-	config.globalAgregatorNode = globalAggregator
-	config.localAggregatorNodes = localAggregators
-
-	if len(localAggregators) <= 1 {
+	if len(config.flEntities.LocalAggregators) <= 1 {
 		// centralized
-		flGlobalAggregator = &model.FlAggregator{
-			Id:              globalAggregator.Id,
-			InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.GLOBAL_AGGREGATOR_PORT)),
-			ExternalAddress: common.GetGlobalAggregatorExternalAddress(globalAggregator.Id),
-			Port:            common.GLOBAL_AGGREGATOR_PORT,
-			NumClients:      2, //int32(len(clients))
-			Rounds:          common.GLOBAL_AGGREGATOR_ROUNDS,
-		}
-		flClients = common.ClientNodesToFlClients(clients, flGlobalAggregator, config.epochs*config.localRounds)
+		config.flEntities.GlobalAggregator.NumClients = int32(len(config.flEntities.Clients))
+		config.flEntities.Clients = common.PrepareFlClients(config.flEntities.Clients, config.flEntities.GlobalAggregator, config.epochs*config.localRounds)
 
 		return &FlConfiguration{
-			GlobalAggregator: flGlobalAggregator,
-			Clients:          flClients,
-			Epochs:           config.epochs * config.localRounds,
+			FlEntities: config.flEntities,
+			Epochs:     config.epochs * config.localRounds,
 		}
 	}
 
 	// note: this is simple example of clustering with equal distribution of clients per aggregator
-	config.bestClusters = make([][]*model.Node, 0)
+	config.bestClusters = make([][]*model.FlClient, 0)
 
 	// get cluster sizes
-	numClients := len(clients)
-	numLocalAggregators := len(localAggregators)
+	numClients := len(config.flEntities.Clients)
+	numLocalAggregators := len(config.flEntities.LocalAggregators)
 	div := numClients / numLocalAggregators
 	mod := numClients % numLocalAggregators
-	clusters := make([][]*model.Node, numLocalAggregators)
+	clusters := make([][]*model.FlClient, numLocalAggregators)
 	clusterSizes := make([]int, numLocalAggregators)
 	for i := 0; i < numLocalAggregators; i++ {
 		if i < mod {
@@ -75,50 +59,34 @@ func (config *MinimizeCommCostConfiguration) GetOptimalConfiguration(nodes []*mo
 
 	// make optimal clusters
 	config.bestCommCost = math.MaxFloat32
-	config.partitionClients(clients, 0, clusters, clusterSizes)
+	config.partitionClients(config.flEntities.Clients, 0, clusters, clusterSizes)
 	fmt.Print("Optimal clusters: ")
 	printClusters(config.bestClusters)
 	fmt.Println("Best comm cost: ", config.bestCommCost)
 
 	// prepare clients and aggregators
-	flGlobalAggregator = &model.FlAggregator{
-		Id:              globalAggregator.Id,
-		InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.GLOBAL_AGGREGATOR_PORT)),
-		ExternalAddress: common.GetGlobalAggregatorExternalAddress(globalAggregator.Id),
-		Port:            common.GLOBAL_AGGREGATOR_PORT,
-		NumClients:      int32(len(localAggregators)),
-		Rounds:          common.GLOBAL_AGGREGATOR_ROUNDS,
-	}
+	config.flEntities.GlobalAggregator.NumClients = int32(len(config.flEntities.LocalAggregators))
+	clients := []*model.FlClient{}
 	for n, cluster := range config.bestClusters {
-		localAggregator := localAggregators[n]
-		localFlAggregator := &model.FlAggregator{
-			Id:              localAggregator.Id,
-			InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.LOCAL_AGGREGATOR_PORT)),
-			ExternalAddress: common.GetLocalAggregatorExternalAddress(localAggregator.Id),
-			Port:            common.LOCAL_AGGREGATOR_PORT,
-			NumClients:      2, // int32(len(cluster))
-			Rounds:          common.LOCAL_AGGREGATOR_ROUNDS,
-			LocalRounds:     config.localRounds,
-			ParentAddress:   flGlobalAggregator.ExternalAddress,
-		}
-		flLocalAggregators = append(flLocalAggregators, localFlAggregator)
-		flClientsCluster := common.ClientNodesToFlClients(cluster, localFlAggregator, config.epochs)
-		flClients = append(flClients, flClientsCluster...)
+		localAggregator := config.flEntities.LocalAggregators[n]
+		localAggregator.LocalRounds = config.localRounds
+		localAggregator.ParentAddress = config.flEntities.GlobalAggregator.ExternalAddress
+		flClientsCluster := common.PrepareFlClients(cluster, localAggregator, config.epochs)
+		clients = append(clients, flClientsCluster...)
 	}
+	config.flEntities.Clients = clients
 
 	return &FlConfiguration{
-		GlobalAggregator: flGlobalAggregator,
-		LocalAggregators: flLocalAggregators,
-		Clients:          flClients,
-		Epochs:           config.epochs,
-		LocalRounds:      config.localRounds,
+		FlEntities:  config.flEntities,
+		Epochs:      config.epochs,
+		LocalRounds: config.localRounds,
 	}
 }
 
-func (config *MinimizeCommCostConfiguration) partitionClients(clients []*model.Node, index int, clusters [][]*model.Node, clusterSizes []int) {
+func (config *MinimizeCommCostConfiguration) partitionClients(clients []*model.FlClient, index int, clusters [][]*model.FlClient, clusterSizes []int) {
 	if index == len(clients) {
 		if validPartition(clusters, clusterSizes) {
-			gaCost, laCost, _ := getHierarchicalAggregationCosts(config.globalAgregatorNode, config.localAggregatorNodes, clusters,
+			gaCost, laCost, _ := getHierarchicalAggregationCosts(config.flEntities.GlobalAggregator, config.flEntities.LocalAggregators, clusters,
 				config.modelSize)
 			commCost := gaCost + laCost
 			if commCost < config.bestCommCost {

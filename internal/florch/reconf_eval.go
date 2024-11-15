@@ -37,7 +37,7 @@ func (orch *FlOrchestrator) evaluateReconfiguration() {
 	orch.logger.Info(fmt.Sprintf("Src predicted accuracy: %.2f", predictedAccuracy))
 
 	reconfigurationChangeCost := cost.GetReconfigurationChangeCost(orch.reconfigurationEvaluator.endConfig, orch.reconfigurationEvaluator.startConfig,
-		orch.nodesMap, orch.modelSize)
+		orch.modelSize)
 	orch.logger.Info(fmt.Sprintf("Reconf change cost: %.2f", reconfigurationChangeCost))
 
 	orch.reconfigurationEvaluator.endPp = performance.NewPerformancePrediction(orch.reconfigurationEvaluator.endAccuracies,

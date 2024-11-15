@@ -84,6 +84,10 @@ func (orch *DummyOrch) CreateFlClient(client *model.FlClient, configFiles map[st
 	return nil
 }
 
+func (orch *DummyOrch) GetClientLogs(clientId string) (bytes.Buffer, error) {
+	return bytes.Buffer{}, nil
+}
+
 func (orch *DummyOrch) RemoveClient(client *model.FlClient) error {
 	return nil
 }

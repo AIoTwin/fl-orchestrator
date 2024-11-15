@@ -3,15 +3,13 @@ package flconfig
 import "github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 
 type FlConfiguration struct {
-	GlobalAggregator *model.FlAggregator
-	LocalAggregators []*model.FlAggregator
-	Clients          []*model.FlClient
-	Epochs           int32
-	LocalRounds      int32
+	FlEntities  *model.FlEntities
+	Epochs      int32
+	LocalRounds int32
 }
 
 type IFlConfigurationModel interface {
-	GetOptimalConfiguration(nodes []*model.Node) *FlConfiguration
+	GetOptimalConfiguration(flEntitiesInitial *model.FlEntities) *FlConfiguration
 }
 
 const Cent_Hier_ConfigModelName = "centHier"

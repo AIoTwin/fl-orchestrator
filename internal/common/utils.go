@@ -88,18 +88,38 @@ func GetNodeStateChangeEvent(availableNodesCurrent map[string]*model.Node, avail
 	return event
 }
 
-func GetClientsAndAggregators(nodes []*model.Node) (*model.Node, []*model.Node, []*model.Node) {
-	clients := []*model.Node{}
-	localAggregators := []*model.Node{}
-	globalAggregator := &model.Node{}
+func GetClientsAndAggregators(nodes []*model.Node) (*model.FlAggregator, []*model.FlAggregator, []*model.FlClient) {
+	globalAggregator := &model.FlAggregator{}
+	localAggregators := []*model.FlAggregator{}
+	clients := []*model.FlClient{}
 	for _, node := range nodes {
 		switch node.FlType {
 		case FL_TYPE_GLOBAL_AGGREGATOR:
-			globalAggregator = node
+			globalAggregator = &model.FlAggregator{
+				Id:              node.Id,
+				InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(GLOBAL_AGGREGATOR_PORT)),
+				ExternalAddress: GetGlobalAggregatorExternalAddress(node.Id),
+				Port:            GLOBAL_AGGREGATOR_PORT,
+				Rounds:          GLOBAL_AGGREGATOR_ROUNDS,
+			}
 		case FL_TYPE_LOCAL_AGGREGATOR:
-			localAggregators = append(localAggregators, node)
+			localAggregator := &model.FlAggregator{
+				Id:                 node.Id,
+				InternalAddress:    fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(LOCAL_AGGREGATOR_PORT)),
+				ExternalAddress:    GetLocalAggregatorExternalAddress(node.Id),
+				Port:               LOCAL_AGGREGATOR_PORT,
+				NumClients:         2, // int32(len(cluster))
+				Rounds:             LOCAL_AGGREGATOR_ROUNDS,
+				CommunicationCosts: node.CommunicationCosts,
+			}
+			localAggregators = append(localAggregators, localAggregator)
 		case FL_TYPE_CLIENT:
-			clients = append(clients, node)
+			client := &model.FlClient{
+				Id:                 node.Id,
+				CommunicationCosts: node.CommunicationCosts,
+				DataDistribution:   node.DataDistribution,
+			}
+			clients = append(clients, client)
 		}
 	}
 
@@ -115,21 +135,14 @@ func GetClientsAndAggregators(nodes []*model.Node) (*model.Node, []*model.Node, 
 	return globalAggregator, localAggregators, clients
 }
 
-func ClientNodesToFlClients(clients []*model.Node, flAggregator *model.FlAggregator, epochs int32) []*model.FlClient {
-	flClients := []*model.FlClient{}
+func PrepareFlClients(clients []*model.FlClient, flAggregator *model.FlAggregator, epochs int32) []*model.FlClient {
 	for _, client := range clients {
-		flClient := &model.FlClient{
-			Id:               client.Id,
-			ParentAddress:    flAggregator.ExternalAddress,
-			ParentNodeId:     flAggregator.Id,
-			Epochs:           epochs,
-			DataDistribution: client.DataDistribution,
-		}
-
-		flClients = append(flClients, flClient)
+		client.ParentAddress = flAggregator.ExternalAddress
+		client.ParentNodeId = flAggregator.Id
+		client.Epochs = epochs
 	}
 
-	return flClients
+	return clients
 }
 
 func GetClientInArray(clients []*model.FlClient, clientId string) *model.FlClient {
@@ -176,4 +189,17 @@ func GetClientConfigMapName(clientId string) string {
 
 func GetClientDeploymentName(clientId string) string {
 	return fmt.Sprintf("%s-%s", FL_CLIENT_DEPLOYMENT_PREFIX, clientId)
+}
+
+func CalculateAverageFloat64(numbers []float64) float64 {
+	if len(numbers) == 0 {
+		return 0
+	}
+
+	var sum float64
+	for _, number := range numbers {
+		sum += number
+	}
+
+	return sum / float64(len(numbers))
 }

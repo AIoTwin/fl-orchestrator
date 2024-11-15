@@ -6,19 +6,17 @@ import (
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
 )
 
-func GetGlobalRoundCost(configuration *flconfig.FlConfiguration, nodes map[string]*model.Node, modelSize float32) float32 {
+func GetGlobalRoundCost(configuration *flconfig.FlConfiguration, modelSize float32) float32 {
 	gaCost := float32(0.0)
-	for _, localAggregator := range configuration.LocalAggregators {
-		laNode := nodes[localAggregator.Id]
-		linkCost := laNode.CommunicationCosts[configuration.GlobalAggregator.Id]
+	for _, localAggregator := range configuration.FlEntities.LocalAggregators {
+		linkCost := localAggregator.CommunicationCosts[configuration.FlEntities.GlobalAggregator.Id]
 
 		gaCost += linkCost * modelSize
 	}
 
 	laCost := float32(0.0)
-	for _, client := range configuration.Clients {
-		clientNode := nodes[client.Id]
-		linkCost := clientNode.CommunicationCosts[client.ParentNodeId]
+	for _, client := range configuration.FlEntities.Clients {
+		linkCost := client.CommunicationCosts[client.ParentNodeId]
 
 		if configuration.LocalRounds == 0 {
 			laCost += linkCost * modelSize
@@ -31,15 +29,13 @@ func GetGlobalRoundCost(configuration *flconfig.FlConfiguration, nodes map[strin
 	return globalRoundCost
 }
 
-func GetReconfigurationChangeCost(oldConfiguration *flconfig.FlConfiguration, newConfiguration *flconfig.FlConfiguration,
-	nodes map[string]*model.Node, modelSize float32) float32 {
+func GetReconfigurationChangeCost(oldConfiguration *flconfig.FlConfiguration, newConfiguration *flconfig.FlConfiguration, modelSize float32) float32 {
 	reconfigurationChangeCost := float32(0.0)
 
-	for _, newClient := range newConfiguration.Clients {
-		oldClient := common.GetClientInArray(oldConfiguration.Clients, newClient.Id)
+	for _, newClient := range newConfiguration.FlEntities.Clients {
+		oldClient := common.GetClientInArray(oldConfiguration.FlEntities.Clients, newClient.Id)
 		if (oldClient == &model.FlClient{} || newClient.ParentNodeId != oldClient.ParentNodeId) {
-			newClientNode := nodes[newClient.Id]
-			linkCost := newClientNode.CommunicationCosts[newClient.ParentNodeId]
+			linkCost := newClient.CommunicationCosts[newClient.ParentNodeId]
 
 			reconfigurationChangeCost += (linkCost / 2) * modelSize
 

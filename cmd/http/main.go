@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	logFile, err := os.OpenFile("log/e6_rva-40.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
+	logFile, err := os.OpenFile("log/red-test_5000-disabled.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
 	if err != nil {
 		panic(err)
 	}

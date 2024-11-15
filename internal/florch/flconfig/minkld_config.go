@@ -11,7 +11,7 @@ import (
 type MinimizeKldConfiguration struct {
 	epochs              int32
 	localRounds         int32
-	bestClusters        [][]*model.Node
+	bestClusters        [][]*model.FlClient
 	averageDistribution []float64
 	bestKld             float64
 }
@@ -23,43 +23,35 @@ func NewMinimizeKldConfiguration(epochs int32, localRounds int32) *MinimizeKldCo
 	}
 }
 
-func (config *MinimizeKldConfiguration) GetOptimalConfiguration(nodes []*model.Node) *FlConfiguration {
-	flGlobalAggregator := &model.FlAggregator{}
-	flLocalAggregators := []*model.FlAggregator{}
-	flClients := []*model.FlClient{}
+func (config *MinimizeKldConfiguration) GetOptimalConfiguration(flEntitiesInitial *model.FlEntities) *FlConfiguration {
+	flEntities := copyFlEntitites(flEntitiesInitial)
 
-	globalAggregator, localAggregators, clients := common.GetClientsAndAggregators(nodes)
-
-	if len(localAggregators) <= 1 {
+	if len(flEntities.LocalAggregators) <= 1 {
 		// centralized
-		flGlobalAggregator = &model.FlAggregator{
-			Id:              globalAggregator.Id,
-			InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.GLOBAL_AGGREGATOR_PORT)),
-			ExternalAddress: common.GetGlobalAggregatorExternalAddress(globalAggregator.Id),
-			Port:            common.GLOBAL_AGGREGATOR_PORT,
-			NumClients:      2, //int32(len(clients))
-			Rounds:          common.GLOBAL_AGGREGATOR_ROUNDS,
+		flEntities.GlobalAggregator.NumClients = int32(len(flEntities.Clients))
+		for _, client := range flEntities.Clients {
+			client.Epochs = config.epochs * config.localRounds
+			client.ParentAddress = flEntities.GlobalAggregator.ExternalAddress
+			client.ParentNodeId = flEntities.GlobalAggregator.Id
 		}
-		flClients = common.ClientNodesToFlClients(clients, flGlobalAggregator, config.epochs*config.localRounds)
 
 		return &FlConfiguration{
-			GlobalAggregator: flGlobalAggregator,
-			Clients:          flClients,
-			Epochs:           config.epochs * config.localRounds,
+			FlEntities: flEntities,
+			Epochs:     config.epochs * config.localRounds,
 		}
 	}
 
 	// note: this is simple example of clustering with equal distribution of clients per aggregator
-	config.bestClusters = make([][]*model.Node, 0)
+	config.bestClusters = make([][]*model.FlClient, 0)
 	config.averageDistribution = make([]float64, 0)
 	config.bestKld = math.MaxFloat64
 
 	// get cluster sizes
-	numClients := len(clients)
-	numLocalAggregators := len(localAggregators)
+	numClients := len(flEntities.Clients)
+	numLocalAggregators := len(flEntities.LocalAggregators)
 	div := numClients / numLocalAggregators
 	mod := numClients % numLocalAggregators
-	clusters := make([][]*model.Node, numLocalAggregators)
+	clusters := make([][]*model.FlClient, numLocalAggregators)
 	clusterSizes := make([]int, numLocalAggregators)
 	for i := 0; i < numLocalAggregators; i++ {
 		if i < mod {
@@ -70,49 +62,33 @@ func (config *MinimizeKldConfiguration) GetOptimalConfiguration(nodes []*model.N
 	}
 
 	// make optimal clusters
-	config.averageDistribution = getClusterDataDistribution(clients)
+	config.averageDistribution = getClusterDataDistribution(flEntities.Clients)
 	config.bestKld = math.MaxFloat64
-	config.partitionClients(clients, 0, clusters, clusterSizes)
+	config.partitionClients(flEntities.Clients, 0, clusters, clusterSizes)
 	fmt.Print("Optimal clusters: ")
 	printClusters(config.bestClusters)
 	fmt.Println("Best KLD: ", config.bestKld)
 
 	// prepare clients and aggregators
-	flGlobalAggregator = &model.FlAggregator{
-		Id:              globalAggregator.Id,
-		InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.GLOBAL_AGGREGATOR_PORT)),
-		ExternalAddress: common.GetGlobalAggregatorExternalAddress(globalAggregator.Id),
-		Port:            common.GLOBAL_AGGREGATOR_PORT,
-		NumClients:      int32(len(localAggregators)),
-		Rounds:          common.GLOBAL_AGGREGATOR_ROUNDS,
-	}
+	flEntities.GlobalAggregator.NumClients = int32(len(flEntities.LocalAggregators))
+	clients := []*model.FlClient{}
 	for n, cluster := range config.bestClusters {
-		localAggregator := localAggregators[n]
-		localFlAggregator := &model.FlAggregator{
-			Id:              localAggregator.Id,
-			InternalAddress: fmt.Sprintf("%s:%s", "0.0.0.0", fmt.Sprint(common.LOCAL_AGGREGATOR_PORT)),
-			ExternalAddress: common.GetLocalAggregatorExternalAddress(localAggregator.Id),
-			Port:            common.LOCAL_AGGREGATOR_PORT,
-			NumClients:      2, // int32(len(cluster))
-			Rounds:          common.LOCAL_AGGREGATOR_ROUNDS,
-			LocalRounds:     config.localRounds,
-			ParentAddress:   flGlobalAggregator.ExternalAddress,
-		}
-		flLocalAggregators = append(flLocalAggregators, localFlAggregator)
-		flClientsCluster := common.ClientNodesToFlClients(cluster, localFlAggregator, config.epochs)
-		flClients = append(flClients, flClientsCluster...)
+		localAggregator := flEntities.LocalAggregators[n]
+		localAggregator.LocalRounds = config.localRounds
+		localAggregator.ParentAddress = flEntities.GlobalAggregator.ExternalAddress
+		flClientsCluster := common.PrepareFlClients(cluster, localAggregator, config.epochs)
+		clients = append(clients, flClientsCluster...)
 	}
+	flEntities.Clients = clients
 
 	return &FlConfiguration{
-		GlobalAggregator: flGlobalAggregator,
-		LocalAggregators: flLocalAggregators,
-		Clients:          flClients,
-		Epochs:           config.epochs,
-		LocalRounds:      config.localRounds,
+		FlEntities:  flEntities,
+		Epochs:      config.epochs,
+		LocalRounds: config.localRounds,
 	}
 }
 
-func (config *MinimizeKldConfiguration) partitionClients(clients []*model.Node, index int, clusters [][]*model.Node, clusterSizes []int) {
+func (config *MinimizeKldConfiguration) partitionClients(clients []*model.FlClient, index int, clusters [][]*model.FlClient, clusterSizes []int) {
 	if index == len(clients) {
 		if validPartition(clusters, clusterSizes) {
 			kld := getTotalKld(clusters, config.averageDistribution)
@@ -135,10 +111,10 @@ func (config *MinimizeKldConfiguration) partitionClients(clients []*model.Node, 
 }
 
 // deepCopyClusters creates a deep copy of the clusters slice
-func deepCopyClusters(clusters [][]*model.Node) [][]*model.Node {
-	newClusters := make([][]*model.Node, len(clusters))
+func deepCopyClusters(clusters [][]*model.FlClient) [][]*model.FlClient {
+	newClusters := make([][]*model.FlClient, len(clusters))
 	for i := range clusters {
-		newClusters[i] = make([]*model.Node, len(clusters[i]))
+		newClusters[i] = make([]*model.FlClient, len(clusters[i]))
 		copy(newClusters[i], clusters[i])
 	}
 	return newClusters
