@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	logFile, err := os.OpenFile("log/non-deg_v5.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
+	logFile, err := os.OpenFile("log/run.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +38,8 @@ func main() {
 		}
 	}
 
-	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator("../../configs/cluster/kube_config.yaml", eventBus, simulation)
+	k8sConfigFilePath := "../../configs/cluster/kube_config.yaml"
+	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator(k8sConfigFilePath, eventBus, simulation)
 	if err != nil {
 		logger.Error("Error while initializing k8s client ::", err.Error())
 		return
