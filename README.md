@@ -61,4 +61,4 @@ To start an HFL task, send a POST request (with curl or Postman) to `http://<NOD
 }
 ```
 
-This deploys HFL where local epochs is set to 2, local rounds also set to 2, and using a configuration strategy "minCommCost" that clusters clients to minimize cost between clients and local aggregators. It defines the total communication budget to be 100 000 units and enables RVA to be used by the orchestrator.
+This deploys HFL where local epochs is set to 2, local rounds also set to 2, and using a configuration strategy "minCommCost" that clusters clients to minimize cost between clients and local aggregators. It defines that the model size is 3.3 MB, sets the total communication budget to 100 000 units, and enables RVA to be used by the orchestrator.
