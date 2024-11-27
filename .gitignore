@@ -27,5 +27,8 @@ configs/cluster/*
 .vscode/*
 
 experiments/*
+!experiments/icmlcn/
 
 cmd/http/log/*
+
+cmd/log_reg/test.csv
