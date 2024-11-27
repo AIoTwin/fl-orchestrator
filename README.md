@@ -52,7 +52,7 @@ To start an HFL task, send a POST request (with curl or Postman) to `http://<NOD
     "epochs": 2,
     "localRounds": 2,
     "configurationModel": "minCommCost",
-    "modelSize": 3.3, // 3.35 
+    "modelSize": 3.3,
     "costConfiguration": {
         "costType": "totalBudget",
         "communicationBudget": 100000
