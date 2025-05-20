@@ -1,7 +1,0 @@
-wandb_config:
-project: 'k8sreal_7nodes_v2'
-entity: 'aiotwins'
-enabled: True
-local_logging_config:
-log_file_path: 'logs/example/example.log'
-scalar_freq: 100

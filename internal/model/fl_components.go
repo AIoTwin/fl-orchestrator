@@ -6,6 +6,7 @@ type FlClient struct {
 	ParentNodeId     string
 	Epochs           int32
 	DataDistribution map[string]int64
+	PartitionId      int32
 }
 
 type FlAggregator struct {

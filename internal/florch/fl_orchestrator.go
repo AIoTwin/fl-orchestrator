@@ -117,13 +117,13 @@ func (orch *FlOrchestrator) Stop() {
 
 func (orch *FlOrchestrator) deployFl() {
 	orch.deployGlobalAggregator(orch.configuration.GlobalAggregator)
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 
 	for _, localAggregator := range orch.configuration.LocalAggregators {
 		orch.deployLocalAggregator(localAggregator)
 		time.Sleep(1 * time.Second)
 	}
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	for _, client := range orch.configuration.Clients {
 		orch.deployFlClient(client)
@@ -336,6 +336,7 @@ func (orch *FlOrchestrator) monitorFlProgress() {
 		logsBuffer, err := orch.contOrch.GetGlobalAggregatorLogs()
 		if err != nil {
 			orch.logger.Error(fmt.Sprintf("Error while obtaining GA logs: %s", err.Error()))
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
@@ -403,7 +404,7 @@ func (orch *FlOrchestrator) monitorFlProgress() {
 			orch.progress.globalRound++
 		}
 
-		time.Sleep(20 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 }
 
@@ -429,7 +430,7 @@ func (orch *FlOrchestrator) printConfiguration() {
 // HELPERS
 
 func getLatestAccuracyFromLogs(logs string) float32 {
-	pattern := `\{'accuracy': ([0-9]*\.[0-9]+)\}`
+	pattern := `accuracy': ([0-9]*\.[0-9]+)`
 	r := regexp.MustCompile(pattern)
 
 	matches := r.FindAllStringSubmatch(logs, -1)

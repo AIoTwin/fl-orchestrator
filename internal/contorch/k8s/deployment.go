@@ -40,8 +40,14 @@ func BuildGlobalAggregatorDeployment(aggregator *model.FlAggregator) *appsv1.Dep
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									MountPath: common.GLOBAL_AGGRETATOR_MOUNT_PATH,
 									Name:      "gaconfig",
+									MountPath: "/home/task.py",
+									SubPath:   "task.py",
+								},
+								{
+									Name:      "gaconfig",
+									MountPath: "/home/global_server_config.yaml",
+									SubPath:   "global_server_config.yaml",
 								},
 							},
 							Resources: corev1.ResourceRequirements{
@@ -50,8 +56,8 @@ func BuildGlobalAggregatorDeployment(aggregator *model.FlAggregator) *appsv1.Dep
 									corev1.ResourceMemory: resource.MustParse("1500Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1.0"),
-									corev1.ResourceMemory: resource.MustParse("1500Mi"),
+									corev1.ResourceCPU:    resource.MustParse("2.0"),
+									corev1.ResourceMemory: resource.MustParse("2000Mi"),
 								},
 							},
 						},
@@ -106,18 +112,19 @@ func BuildLocalAggregatorDeployment(aggregator *model.FlAggregator) *appsv1.Depl
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									MountPath: common.LOCAL_AGGRETATOR_MOUNT_PATH,
 									Name:      "laconfig",
+									MountPath: "/home/local_server_config.yaml",
+									SubPath:   "local_server_config.yaml",
 								},
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("0.5"),
-									corev1.ResourceMemory: resource.MustParse("1100Mi"),
+									corev1.ResourceCPU:    resource.MustParse("1.0"),
+									corev1.ResourceMemory: resource.MustParse("1500Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("0.5"),
-									corev1.ResourceMemory: resource.MustParse("1100Mi"),
+									corev1.ResourceCPU:    resource.MustParse("2.0"),
+									corev1.ResourceMemory: resource.MustParse("2000Mi"),
 								},
 							},
 						},
@@ -167,18 +174,24 @@ func BuildClientDeployment(client *model.FlClient) *appsv1.Deployment {
 							Image: common.FL_CLIENT_IMAGE,
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									MountPath: common.FL_CLIENT_CONFIG_MOUNT_PATH,
 									Name:      "clientconfig",
+									MountPath: "/home/task.py",
+									SubPath:   "task.py",
+								},
+								{
+									Name:      "clientconfig",
+									MountPath: "/home/client_config.yaml",
+									SubPath:   "client_config.yaml",
 								},
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("1.0"),
-									corev1.ResourceMemory: resource.MustParse("900Mi"),
+									corev1.ResourceMemory: resource.MustParse("1500Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1.0"),
-									corev1.ResourceMemory: resource.MustParse("900Mi"),
+									corev1.ResourceCPU:    resource.MustParse("2.0"),
+									corev1.ResourceMemory: resource.MustParse("2000Mi"),
 								},
 							},
 						},
