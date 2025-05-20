@@ -3,8 +3,10 @@ package model
 type FlClient struct {
 	Id               string
 	ParentAddress    string
+	ParentNodeId     string
 	Epochs           int32
 	DataDistribution map[string]int64
+	PartitionId      int32
 }
 
 type FlAggregator struct {

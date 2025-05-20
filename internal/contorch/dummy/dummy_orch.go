@@ -1,6 +1,8 @@
 package dummyorch
 
 import (
+	"bytes"
+
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/common"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/events"
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/model"
@@ -40,6 +42,10 @@ func (orch *DummyOrch) StartNodeStateChangeNotifier() {
 	orch.cronScheduler.Start()
 }
 
+func (orch *DummyOrch) StopAllNotifiers() {
+	orch.cronScheduler.Stop()
+}
+
 func (orch *DummyOrch) notifyNodeStateChanges() {
 	availableNodesNew, err := orch.GetAvailableNodes(false)
 	if err != nil {
@@ -56,6 +62,10 @@ func (orch *DummyOrch) notifyNodeStateChanges() {
 
 func (orch *DummyOrch) CreateGlobalAggregator(aggregator *model.FlAggregator, configFiles map[string]string) error {
 	return nil
+}
+
+func (orch *DummyOrch) GetGlobalAggregatorLogs() (bytes.Buffer, error) {
+	return bytes.Buffer{}, nil
 }
 
 func (orch *DummyOrch) RemoveGlobalAggregator(aggregator *model.FlAggregator) error {

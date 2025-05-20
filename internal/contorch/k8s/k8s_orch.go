@@ -1,6 +1,7 @@
 package k8sorch
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -26,13 +27,15 @@ const communicationCostPrefix = "comm/"
 const dataDistributionPrefix = "data/"
 
 type K8sOrchestrator struct {
-	config           *rest.Config
-	clientset        *kubernetes.Clientset
-	metricsClientset *metricsv.Clientset
-	eventBus         *events.EventBus
-	cronScheduler    *cron.Cron
-	availableNodes   map[string]*model.Node
-	simulation       bool
+	config             *rest.Config
+	clientset          *kubernetes.Clientset
+	metricsClientset   *metricsv.Clientset
+	eventBus           *events.EventBus
+	cronScheduler      *cron.Cron
+	availableNodes     map[string]*model.Node
+	simulation         bool
+	simulationNodes    []string
+	lastSimulationNode int
 }
 
 func NewK8sOrchestrator(configFilePath string, eventBus *events.EventBus, simulation bool) (*K8sOrchestrator, error) {
@@ -63,6 +66,9 @@ func NewK8sOrchestrator(configFilePath string, eventBus *events.EventBus, simula
 		cronScheduler:    cron.New(cron.WithSeconds()),
 		availableNodes:   make(map[string]*model.Node),
 		simulation:       simulation,
+		simulationNodes: []string{"fl-k3s-ga", "fl-k3s-la-1", "fl-k3s-la-2", "fl-k3s-node-1", "fl-k3s-node-2",
+			"fl-k3s-node-3", "fl-k3s-node-4", "fl-k3s-node-5", "fl-k3s-node-6", "fl-k3s-node-7", "fl-k3s-node-8"},
+		lastSimulationNode: 0,
 	}, nil
 }
 
@@ -127,6 +133,10 @@ func (orch *K8sOrchestrator) StartNodeStateChangeNotifier() {
 	orch.cronScheduler.Start()
 }
 
+func (orch *K8sOrchestrator) StopAllNotifiers() {
+	orch.cronScheduler.Stop()
+}
+
 func (orch *K8sOrchestrator) notifyNodeStateChanges() {
 	availableNodesNew, err := orch.GetAvailableNodes(false)
 	if err != nil {
@@ -150,7 +160,11 @@ func (orch *K8sOrchestrator) CreateGlobalAggregator(aggregator *model.FlAggregat
 	deployment := BuildGlobalAggregatorDeployment(aggregator)
 	if !orch.simulation {
 		deployment.Spec.Template.Spec.NodeName = aggregator.Id
+	} else {
+		deployment.Spec.Template.Spec.NodeName = orch.simulationNodes[orch.lastSimulationNode]
+		orch.lastSimulationNode++
 	}
+
 	err = orch.createDeployment(deployment)
 	if err != nil {
 		return err
@@ -163,6 +177,43 @@ func (orch *K8sOrchestrator) CreateGlobalAggregator(aggregator *model.FlAggregat
 	}
 
 	return nil
+}
+
+func (orch *K8sOrchestrator) GetGlobalAggregatorLogs() (bytes.Buffer, error) {
+	// Get the deployment
+	deployment, err := orch.clientset.AppsV1().Deployments(corev1.NamespaceDefault).Get(context.TODO(),
+		common.GLOBAL_AGGRETATOR_DEPLOYMENT_NAME, metav1.GetOptions{})
+	if err != nil {
+		return bytes.Buffer{}, fmt.Errorf("error retrieving deployment: %v", err)
+	}
+
+	// Get the selector from the deployment
+	labelSelector := metav1.FormatLabelSelector(deployment.Spec.Selector)
+
+	// List pods with the same labels
+	podList, err := orch.clientset.CoreV1().Pods(corev1.NamespaceDefault).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return bytes.Buffer{}, fmt.Errorf("error listing pods: %v", err)
+	}
+
+	// Get the logs of the pod
+	req := orch.clientset.CoreV1().Pods(corev1.NamespaceDefault).GetLogs(podList.Items[0].Name, &corev1.PodLogOptions{})
+	logs, err := req.Stream(context.TODO())
+	if err != nil {
+		return bytes.Buffer{}, err
+	}
+	defer logs.Close()
+
+	// Read the logs into a buffer
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(logs)
+	if err != nil {
+		return bytes.Buffer{}, err
+	}
+
+	return buf, nil
 }
 
 func (orch *K8sOrchestrator) RemoveGlobalAggregator(aggregator *model.FlAggregator) error {
@@ -193,7 +244,11 @@ func (orch *K8sOrchestrator) CreateLocalAggregator(aggregator *model.FlAggregato
 	deployment := BuildLocalAggregatorDeployment(aggregator)
 	if !orch.simulation {
 		deployment.Spec.Template.Spec.NodeName = aggregator.Id
+	} else {
+		deployment.Spec.Template.Spec.NodeName = orch.simulationNodes[orch.lastSimulationNode]
+		orch.lastSimulationNode++
 	}
+
 	err = orch.createDeployment(deployment)
 	if err != nil {
 		return err
@@ -236,7 +291,14 @@ func (orch *K8sOrchestrator) CreateFlClient(client *model.FlClient, configFiles 
 	deployment := BuildClientDeployment(client)
 	if !orch.simulation {
 		deployment.Spec.Template.Spec.NodeName = client.Id
+	} else {
+		deployment.Spec.Template.Spec.NodeName = orch.simulationNodes[orch.lastSimulationNode]
+		orch.lastSimulationNode++
+		if orch.lastSimulationNode == len(orch.simulationNodes) {
+			orch.lastSimulationNode = 3
+		}
 	}
+
 	err = orch.createDeployment(deployment)
 	if err != nil {
 		return err
