@@ -1,9 +1,9 @@
 package common
 
 // Container images
-const FL_CLIENT_IMAGE = "cilicivan96/hfl-client:1.0"
-const LOCAL_AGGRETATOR_IMAGE = "cilicivan96/hfl-local-server:1.0"
-const GLOBAL_AGGRETATOR_IMAGE = "cilicivan96/hfl-global-server:1.16"
+const FL_CLIENT_IMAGE = "cilicivan96/hfl-client:0.2"
+const LOCAL_AGGRETATOR_IMAGE = "cilicivan96/hfl-local-server:0.2"
+const GLOBAL_AGGRETATOR_IMAGE = "cilicivan96/hfl-global-server:0.2"
 
 // FL Client configs
 const FL_CLIENT_DEPLOYMENT_PREFIX = "fl-cl"

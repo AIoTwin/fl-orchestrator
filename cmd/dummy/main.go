@@ -31,7 +31,7 @@ func main() {
 	}
 
 	flOrchestrator, err := florch.NewFlOrchestrator(dummyOrchestrator, eventBus, logger, flconfig.Cent_Hier_ConfigModelName,
-		-1, -1, float32(modelSize), costConfiguration, false)
+		-1, -1, 32, 0.1, float32(modelSize), costConfiguration, false)
 	if err != nil {
 		logger.Error("Error creating orchestrator", "error", err)
 		return

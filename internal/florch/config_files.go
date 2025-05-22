@@ -47,7 +47,8 @@ func BuildClientConfigFiles(client *model.FlClient) (map[string]string, error) {
 	taskString := string(taskBytesArray)
 
 	clientConfigString := fmt.Sprintf(ClientConfig_Yaml, client.ParentAddress, strconv.Itoa(int(client.PartitionId)),
-		"10", strconv.Itoa(int(client.Epochs)))
+		strconv.Itoa(int(client.NumPartitions)), strconv.Itoa(int(client.Epochs)), strconv.Itoa(int(client.BatchSize)),
+		fmt.Sprintf("%f", client.LearningRate))
 
 	filesData := map[string]string{
 		"task.py":            taskString,
@@ -94,7 +95,7 @@ node_config:
   num-partitions: %[3]s 
 
 run_config:
-  batch-size: 32
   local-epochs: %[4]s 
-  learning-rate: 0.1 
+  batch-size: %[5]s 
+  learning-rate: %[6]s  
 `

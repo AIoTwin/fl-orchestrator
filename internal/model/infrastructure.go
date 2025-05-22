@@ -7,6 +7,8 @@ type Node struct {
 	FlType             string
 	CommunicationCosts map[string]float32 // destination node ID -> cost
 	DataDistribution   map[string]int64   // class ID -> number of samples
+	NumPartitions      int32
+	PartitionId        int32
 }
 
 type NodeResources struct {

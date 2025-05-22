@@ -16,7 +16,7 @@ func GetAvailableNodesFromFile() (map[string]*model.Node, error) {
 
 	records := ReadCsvFile("../../configs/cluster/cluster.csv")
 	for _, record := range records {
-		if len(record) != 4 {
+		if len(record) != 6 {
 			return nil, fmt.Errorf("Incorrect CSV record: %v", record)
 		}
 
@@ -31,14 +31,17 @@ func GetAvailableNodesFromFile() (map[string]*model.Node, error) {
 		}
 
 		dataDistributions := make(map[string]int64)
-		dataDistributionsSlice := strings.Split(record[3], ",")
+		/* dataDistributionsSlice := strings.Split(record[3], ",")
 		for _, dataDistribution := range dataDistributionsSlice {
 			dataDistributionSplited := strings.Split(dataDistribution, ":")
 			if len(dataDistributionSplited) == 2 {
 				samplesParsed, _ := strconv.Atoi(dataDistributionSplited[1])
 				dataDistributions[dataDistributionSplited[0]] = int64(samplesParsed)
 			}
-		}
+		} */
+
+		numPartitions, _ := strconv.Atoi(record[4])
+		partitionId, _ := strconv.Atoi(record[5])
 
 		node := &model.Node{
 			Id:                 record[0],
@@ -46,6 +49,8 @@ func GetAvailableNodesFromFile() (map[string]*model.Node, error) {
 			FlType:             record[1],
 			CommunicationCosts: communicationCosts,
 			DataDistribution:   dataDistributions,
+			NumPartitions:      int32(numPartitions),
+			PartitionId:        int32(partitionId),
 		}
 
 		nodes[node.Id] = node
@@ -117,14 +122,15 @@ func GetClientsAndAggregators(nodes []*model.Node) (*model.Node, []*model.Node, 
 
 func ClientNodesToFlClients(clients []*model.Node, flAggregator *model.FlAggregator, epochs int32) []*model.FlClient {
 	flClients := []*model.FlClient{}
-	for i, client := range clients {
+	for _, client := range clients {
 		flClient := &model.FlClient{
 			Id:               client.Id,
 			ParentAddress:    flAggregator.ExternalAddress,
 			ParentNodeId:     flAggregator.Id,
 			Epochs:           epochs,
 			DataDistribution: client.DataDistribution,
-			PartitionId:      int32(i),
+			NumPartitions:    client.NumPartitions,
+			PartitionId:      client.PartitionId,
 		}
 
 		flClients = append(flClients, flClient)
