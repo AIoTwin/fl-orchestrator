@@ -6,7 +6,10 @@ type FlClient struct {
 	ParentNodeId     string
 	Epochs           int32
 	DataDistribution map[string]int64
+	NumPartitions    int32
 	PartitionId      int32
+	BatchSize        int32
+	LearningRate     float32
 }
 
 type FlAggregator struct {

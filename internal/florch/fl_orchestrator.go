@@ -29,6 +29,8 @@ type FlOrchestrator struct {
 	logger                   hclog.Logger
 	resultsFileName          string
 	nodesMap                 map[string]*model.Node
+	batchSize                int32
+	learningRate             float32
 	configuration            *flconfig.FlConfiguration
 	modelSize                float32
 	costConfiguration        *cost.CostCofiguration
@@ -47,12 +49,14 @@ type FlProgress struct {
 }
 
 func NewFlOrchestrator(contOrch contorch.IContainerOrchestrator, eventBus *events.EventBus, logger hclog.Logger,
-	configurationModelName string, epochs int32, localRounds int32, modelSize float32,
-	costConfiguration *cost.CostCofiguration, rvaEnabled bool) (*FlOrchestrator, error) {
+	configurationModelName string, epochs int32, localRounds int32, batchSize int32, learningRate float32,
+	modelSize float32, costConfiguration *cost.CostCofiguration, rvaEnabled bool) (*FlOrchestrator, error) {
 	orch := &FlOrchestrator{
 		contOrch:                 contOrch,
 		eventBus:                 eventBus,
 		logger:                   logger,
+		batchSize:                batchSize,
+		learningRate:             learningRate,
 		modelSize:                modelSize,
 		costConfiguration:        costConfiguration,
 		rvaEnabled:               rvaEnabled,
@@ -126,6 +130,8 @@ func (orch *FlOrchestrator) deployFl() {
 	time.Sleep(30 * time.Second)
 
 	for _, client := range orch.configuration.Clients {
+		client.BatchSize = orch.batchSize
+		client.LearningRate = orch.learningRate
 		orch.deployFlClient(client)
 		time.Sleep(1 * time.Second)
 	}
@@ -412,14 +418,16 @@ func (orch *FlOrchestrator) printConfiguration() {
 	configToPrint := ""
 
 	configToPrint += fmt.Sprintln("Global aggregator ::")
-	configToPrint += fmt.Sprintf("\t%+v\n", orch.configuration.GlobalAggregator)
+	globalAggregator := orch.configuration.GlobalAggregator
+	configToPrint += fmt.Sprintf("\tNode id:%s\t| Rounds:%d\n", globalAggregator.Id, globalAggregator.Rounds)
 	configToPrint += fmt.Sprintln("Local aggregators ::")
 	for _, a := range orch.configuration.LocalAggregators {
-		configToPrint += fmt.Sprintf("\t%+v\n", a)
+		configToPrint += fmt.Sprintf("\tNode id:%s\t| Parent address:%s\t| Local rounds:%d Rounds:%d\n", a.Id, a.ParentAddress,
+			a.LocalRounds, a.Rounds)
 	}
 	configToPrint += fmt.Sprintln("Clients ::")
 	for _, c := range orch.configuration.Clients {
-		configToPrint += fmt.Sprintf("\t%+v\n", c)
+		configToPrint += fmt.Sprintf("\tNode id:%s\t| Parent node:%s\t| Epochs:%d\n", c.Id, c.ParentNodeId, c.Epochs)
 	}
 	configToPrint += fmt.Sprintln("Epochs: ", orch.configuration.Epochs)
 	configToPrint += fmt.Sprintln("Local rounds: ", orch.configuration.LocalRounds)

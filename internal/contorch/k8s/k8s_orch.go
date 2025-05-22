@@ -23,6 +23,8 @@ import (
 )
 
 const flTypeLabel = "fl/type"
+const numPartitionsLabel = "fl/num-partitions"
+const partitionIdLabel = "fl/partition-id"
 const communicationCostPrefix = "comm/"
 const dataDistributionPrefix = "data/"
 
@@ -415,7 +417,6 @@ func nodeCoreToNodeModel(nodeCore corev1.Node, nodeMetric v1beta1.NodeMetrics) *
 
 	hostIP := getHostIp(nodeCore)
 
-	commCosts, dataDistribition := getCommCostsAndDataDistribution(nodeCore.Labels)
 	nodeModel := &model.Node{
 		Id:         nodeCore.Name,
 		InternalIp: hostIP,
@@ -423,12 +424,32 @@ func nodeCoreToNodeModel(nodeCore corev1.Node, nodeMetric v1beta1.NodeMetrics) *
 			CpuUsage: cpuPercentage,
 			RamUsage: memoryPercentage,
 		},
-		FlType:             getFlType(nodeCore.Labels),
-		CommunicationCosts: commCosts,
-		DataDistribution:   dataDistribition,
 	}
 
+	nodeLabelsToNodeModel(nodeCore.Labels, nodeModel)
+
 	return nodeModel
+}
+
+func nodeLabelsToNodeModel(labels map[string]string, nodeModel *model.Node) {
+	flType := labels[flTypeLabel]
+	numPartitions, _ := strconv.Atoi(labels[numPartitionsLabel])
+	partitionId, _ := strconv.Atoi(labels[partitionIdLabel])
+	communicationCosts := make(map[string]float32)
+	for key, value := range labels {
+		if strings.HasPrefix(key, communicationCostPrefix) {
+			splits := strings.Split(key, communicationCostPrefix)
+			if len(splits) == 2 {
+				cost, _ := strconv.ParseFloat(value, 32)
+				communicationCosts[splits[1]] = float32(cost)
+			}
+		}
+	}
+
+	nodeModel.FlType = flType
+	nodeModel.CommunicationCosts = communicationCosts
+	nodeModel.NumPartitions = int32(numPartitions)
+	nodeModel.PartitionId = int32(partitionId)
 }
 
 func getFlType(labels map[string]string) string {
