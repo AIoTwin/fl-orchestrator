@@ -67,7 +67,7 @@ func NewFlOrchestrator(contOrch contorch.IContainerOrchestrator, eventBus *event
 	case flconfig.MinimizeKld_ConfigModelName:
 		orch.configurationModel = flconfig.NewMinimizeKldConfiguration(epochs, localRounds)
 	case flconfig.MinimizeCommCost_ConfigModelName:
-		orch.configurationModel = flconfig.NewMinimizeCommCostConfiguration(epochs, localRounds, modelSize)
+		orch.configurationModel = flconfig.NewMinimizeCommCostGreedyConfiguration(epochs, localRounds, modelSize)
 	case flconfig.Cent_Hier_ConfigModelName:
 		orch.configurationModel = flconfig.NewCentrHierFlConfiguration(modelSize, costConfiguration.CommunicationBudget)
 	default:
@@ -88,6 +88,7 @@ func (orch *FlOrchestrator) Start() error {
 
 	// set cofiguration and deploy FL
 	orch.configuration = orch.configurationModel.GetOptimalConfiguration(nodesMapToArray(orch.nodesMap))
+	fmt.Printf("Cost per global round: %.2f\n", cost.GetGlobalRoundCost(orch.configuration, orch.nodesMap, orch.modelSize))
 	orch.printConfiguration()
 	orch.deployFl()
 
@@ -121,13 +122,13 @@ func (orch *FlOrchestrator) Stop() {
 
 func (orch *FlOrchestrator) deployFl() {
 	orch.deployGlobalAggregator(orch.configuration.GlobalAggregator)
-	time.Sleep(20 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	for _, localAggregator := range orch.configuration.LocalAggregators {
 		orch.deployLocalAggregator(localAggregator)
 		time.Sleep(1 * time.Second)
 	}
-	time.Sleep(30 * time.Second)
+	time.Sleep(60 * time.Second)
 
 	for _, client := range orch.configuration.Clients {
 		client.BatchSize = orch.batchSize
@@ -519,6 +520,7 @@ func nodesMapToArray(nodesMap map[string]*model.Node) []*model.Node {
 }
 
 func getResultsFileName() string {
+	os.MkdirAll("../../experiments/results", 0777)
 	return fmt.Sprintf("../../experiments/results/results_%s.csv", time.Now().Format("2006-01-02_15-04"))
 }
 

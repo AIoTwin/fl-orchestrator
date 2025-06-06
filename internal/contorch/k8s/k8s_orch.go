@@ -68,8 +68,11 @@ func NewK8sOrchestrator(configFilePath string, eventBus *events.EventBus, simula
 		cronScheduler:    cron.New(cron.WithSeconds()),
 		availableNodes:   make(map[string]*model.Node),
 		simulation:       simulation,
-		simulationNodes: []string{"fl-k3s-ga", "fl-k3s-la-1", "fl-k3s-la-2", "fl-k3s-node-1", "fl-k3s-node-2",
-			"fl-k3s-node-3", "fl-k3s-node-4", "fl-k3s-node-5", "fl-k3s-node-6", "fl-k3s-node-7", "fl-k3s-node-8"},
+		simulationNodes: []string{"hfl-n1", "hfl-n2", "hfl-n3", "hfl-n4", "hfl-n5", "hfl-n6",
+			"hfl-n7", "hfl-n8", "hfl-n9", "hfl-n10", "hfl-n11", "hfl-n12", "hfl-n13",
+			"hfl-n14", "hfl-n15", "hfl-n16", "hfl-n17", "hfl-n18", "hfl-n19", "hfl-n20",
+			"hfl-n21", "hfl-n22", "hfl-n23", "hfl-n24", "hfl-n25", "hfl-n26", "hfl-n27",
+			"hfl-n28", "hfl-n29", "hfl-n30"},
 		lastSimulationNode: 0,
 	}, nil
 }

@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	_ = os.Mkdir("log", 0777)
 	logFile, err := os.OpenFile("log/run.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
 	if err != nil {
 		panic(err)
