@@ -40,7 +40,7 @@ func main() {
 	}
 
 	k8sConfigFilePath := "../../configs/cluster/kube_config.yaml"
-	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator(k8sConfigFilePath, eventBus, simulation)
+	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator(k8sConfigFilePath, eventBus, simulation, "group-1")
 	if err != nil {
 		logger.Error("Error while initializing k8s client ::", err.Error())
 		return

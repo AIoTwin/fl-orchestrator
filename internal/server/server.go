@@ -13,7 +13,7 @@ import (
 )
 
 func StartHttpServer(logger hclog.Logger, defaultRouter http.Handler) {
-	port := 8080
+	port := 8081
 
 	// create a new server
 	server := &http.Server{
