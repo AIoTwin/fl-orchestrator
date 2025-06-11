@@ -1,6 +1,6 @@
 # AIoTwin 3rd Summer School: Hands-on Session on AIoTwin Orchestration Middleware
 
-These is the README for the Hands-on on AIoTwin Orchestration Middleware Part II.: Framework for Adaptive Orchestration of FL Pipelines​.
+These is the README for the **Hands-on session on AIoTwin Orchestration Middleware Part II.: Framework for Adaptive Orchestration of FL Pipelines​**.
 This README shows step-by-step instructions for running an FL pipeline using our framework on the UNIZG-FER infrastructure.
 
 ## Prerequisites
@@ -20,7 +20,7 @@ Inside the `hfl-k3s-master` node, create a [Linux screen](https://linuxize.com/p
 screen -S group-X 
 ```
 
-In the screen, you can create new screens with `Ctrl+a c`, move between screens with `Ctrl+a N` (replace N with screen number), and detach from the screen with `Ctrl+x d`. To scroll withing the screen mode, press `Ctrl+a Esc` and then move up and down with `Page Up` and `Page Down` keys.
+In the screen mode, you can create new screens with `Ctrl+a c`, move between screens with `Ctrl+a N` (replace N with screen number), and detach from the screen with `Ctrl+x d`. To scroll within the screen mode, press `Ctrl+a Esc` and then move up and down with `Page Up` and `Page Down` keys.
 
 Each group will have their own orchestrator running on top of a K3s cluster, with 7 nodes assigned to their group for running the FL pipeline. Position your terminal to the root directory of the orchestrator given to your group (replace X with your group number):
 
@@ -32,28 +32,30 @@ Run all the following commands from that root directory.
 
 ### Starting the orchestrator
 
-Position your terminal to the main of the HTTP server and start the server:
+Position your terminal to the main directory of the HTTP server that exposes orchestrator functionalities and start the server:
 
 ``` bash
 cd cmd/http
 go run main.go sim
-
+```
+```
 2025-06-10T15:55:34.396+0200 [INFO]  fl-orch: Starting server on port: 8081
 ```
 
 ### Configuring the topology
 
 The simulated topology is defined in the CSV file with the following columns: <br/>
-`node_id,fl_type,communication_costs,data_distribution,num_partitions,partition_id`.  <br/>
-FL type can be GA, LA or client, communication costs are defined towards the possible parent aggregators (from clients to LA's and from LA's to GA), and data distribution is not used in this tutorial.
+`node_id,fl_type,communication_costs,data_distribution,num_partitions,partition_id`. 
 
-To configure a simulated topology of the experiment, open another screen and edit the following file (you can use `vim` editor also):
+FL type can be global aggregator (GA), local aggregator (LA) or client, communication costs are defined towards the possible parent aggregators (from clients to LA's and from LA's to GA), and data distribution is not used in this tutorial.
+
+To configure a simulated topology of the experiment, open another screen and edit the following file (you can use `vim` editor if preferred):
 
 ``` bash
 nano configs/cluster/cluster.csv
 ```
 
-(Optional) You can also simulate changes in the topology. At any moment, delete a node or add a new node to the topology file (`cluster.csv`) and it will automatically reconfigure the environment. Also, after 10 global rounds, the simulation mode appends the content of the `changes.csv` file to `cluster.csv` which introduces a topology change. Currently, it is empty, but you can add two nodes in the file and wait to be added during runtime.
+(Optional) You can also simulate changes in the topology during runtime. At any moment, delete a node (remove the line) or add a new node to the topology file (`cluster.csv`) and it will automatically trigger the reconfiguration of the environment. Also, after 10 global rounds, the simulation mode appends the content of the `changes.csv` file to `cluster.csv` which introduces a topology change. Currently, it is empty, but you can add nodes in the file and wait to be added during runtime.
 
 ### Defining the FL task
 
@@ -63,17 +65,17 @@ The FL task is defined through the Python file `task.py`. First, check the templ
 cat configs/fl/task/task_template.py
 ```
 
-The, edit the following file to define the task that will be run in the pipeline:
+Then, edit the following file to define the FL task that will be deployed in the pipeline:
 
 ``` bash
 nano configs/fl/task/task.py
 ```
 
-You can see some examples of defining a task using CIFAR-10 or MNIST datasets in the directory `configs/fl/task/examples`.
+You can see examples of an FL task training on CIFAR-10 or MNIST datasets in the directory `configs/fl/task/examples`.
 
 ### Starting an FL pipeline
 
-To start an FL pipeline, send a POST request to `http://161.53.133.104:<port>/fl/start` (replace port with port of your orchestrator group number, e.g. 8081 for group 1) using Postman and providing the following request data:
+To start an FL pipeline, send a POST request to `http://161.53.133.104:<port>/fl/start` (replace port with port of your group's orchestrator, e.g. 8081 for group 1). Send the request with Postman and provide the following request body (set the type to raw -> JSON):
 
 ```json
 {
@@ -93,15 +95,13 @@ To start an FL pipeline, send a POST request to `http://161.53.133.104:<port>/fl
 }
 ```
 
-During the second part of the hands on, try pipelines with different HFL parameters (`epochs` and `localRounds`) and training parameters to see their impact on the model performance.
+Once you run the pipeline with default parameters, try pipelines with different HFL parameters (`epochs` and `localRounds`) and training parameters to see their impact on the model performance.
 
 ### Monitoring the pipeline progress
 
-First, in the orchestrator logs check that the pipeline was deployed, how the nodes are clustered, and later you can also check there the progress of during global rounds (model accuracy and loss). In the beginning, it should look something like this:
+To monitor the progress of the pipeline, first check the orchestrator's logs, to make sure that the pipeline was successfully deployed, see how the nodes are clustered, and later you can also monitor the progress of the model performance over global rounds (model accuracy and loss). In the beginning, it should look something like this:
 
-```bash
-go run main.go sim
-
+```
 2025-06-11T12:51:17.366+0200 [INFO]  fl-orch: Starting server on port: 8081
 2025-06-11T12:51:23.688+0200 [INFO]  fl-orch: Starting FL with config minCommCost, modelSize 3.300000, and cost type totalBudget
 Optimal clusters: [n4 n5] [n7 n6] 
@@ -134,11 +134,12 @@ Local rounds:  2
 
 Note that local aggregators are deployed 30 seconds after the global aggregator, and the clients are deployed 60 secodns after local aggregators, so that the parent aggregators have enough time to initialize before their childs are connected. Also, the client program will take some time to start becuase in the beginning it is downloading the full dataset which is split to get the client partition.
 
-Since the FL services are deployed on K3s, check the pods that are running the services (use the namespace for your group, so `group-X`):
+Since the FL services are deployed on K3s, check the pods that are running the services (use the namespace for your group, i.e. `group-X`):
 
 ```bash
 kubectl -n group-1 get pods
-
+```
+```
 NAME                        READY   STATUS    RESTARTS   AGE
 fl-cl-n4-55b9cbccc7-zrk2s   1/1     Running   0          2m42s
 fl-cl-n5-76b7d8866-8562z    1/1     Running   0          2m41s
@@ -149,7 +150,7 @@ fl-la-n2-5499d6c748-67ljh   1/1     Running   0          3m44s
 fl-la-n3-5b6bf567c9-k4cz4   1/1     Running   0          3m43s
 ```
 
-Now, to see the logs of a client (or any other FL service), run the following command:
+Finally, to see the logs of a client (or any pod running the FL service), run the following command (replace the pod name with your pod):
 
 ```bash
 kubectl -n group-1 logs fl-cl-n4-55b9cbccc7-zrk2s
@@ -168,6 +169,7 @@ Due to the limited resource availability in the test cluster, wait for all the p
 
 ```bash
 kubectl -n group-1 get pods
-
+```
+```
 No resources found in group-1 namespace.
 ```
