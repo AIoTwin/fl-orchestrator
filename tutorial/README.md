@@ -75,7 +75,7 @@ You can see examples of an FL task training on CIFAR-10 or MNIST datasets in the
 
 ### Starting an FL pipeline
 
-To start an FL pipeline, send a POST request to `http://161.53.133.104:<port>/fl/start` (replace port with port of your group's orchestrator, e.g. 8081 for group 1). Send the request with Postman and provide the following request body (set the type to raw -> JSON):
+To start an FL pipeline, send a POST request to `http://161.53.133.104:80/<group-name>/fl/start` (replace group name with your group, e.g. `group-1`). Send the request with Postman and provide the following request body (set the type to raw -> JSON):
 
 ```json
 {
