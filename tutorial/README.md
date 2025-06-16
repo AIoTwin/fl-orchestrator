@@ -81,7 +81,7 @@ You can see examples of an FL task training on CIFAR-10 or MNIST datasets in the
 
 ### Starting an FL pipeline
 
-To start an FL pipeline, send a POST request to `http://161.53.133.104:80/<group-name>/fl/start` (replace group name with your group, e.g. `group-1`). Send the request with Postman and provide the following request body (set the type to raw -> JSON):
+To start an FL pipeline, send a POST request to `http://161.53.133.104:80/group-X/fl/start` (replace X with your group number, e.g. `group-1`). Send the request with Postman and provide the following request body (set the type to raw -> JSON):
 
 ```json
 {
@@ -140,10 +140,10 @@ Local rounds:  2
 
 Note that local aggregators are deployed 30 seconds after the global aggregator, and the clients are deployed 60 secodns after local aggregators, so that the parent aggregators have enough time to initialize before their childs are connected. Also, the client program will take some time to start becuase in the beginning it is downloading the full dataset which is split to get the client partition.
 
-Since the FL services are deployed on K3s, check the pods that are running the services (use the namespace for your group, i.e. `group-X`):
+Since the FL services are deployed on K3s, check the pods that are running the services (use the namespace for your group, i.e. `group-1`):
 
 ```bash
-kubectl -n group-1 get pods
+kubectl -n group-X get pods
 ```
 ```
 NAME                        READY   STATUS    RESTARTS   AGE
@@ -159,7 +159,7 @@ fl-la-n3-5b6bf567c9-k4cz4   1/1     Running   0          3m43s
 Finally, to see the logs of a client (or any pod running the FL service), run the following command (replace the pod name with your pod):
 
 ```bash
-kubectl -n group-1 logs fl-cl-n4-55b9cbccc7-zrk2s
+kubectl -n group-X logs fl-cl-n4-55b9cbccc7-zrk2s
 ```
 
 ### Removing the pipeline
@@ -174,8 +174,8 @@ cd scripts
 Due to the limited resource availability in the test cluster, wait for all the pods to be terminated before running another pipeline:
 
 ```bash
-kubectl -n group-1 get pods
+kubectl -n group-X get pods
 ```
 ```
-No resources found in group-1 namespace.
+No resources found in group-X namespace.
 ```
