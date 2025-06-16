@@ -50,7 +50,7 @@ The simulated topology is defined in the CSV file with the following columns: <b
 
 FL type can be global aggregator (GA), local aggregator (LA) or client, communication costs are defined towards the possible parent aggregators (from clients to LA's and from LA's to GA), and data distribution is not used in this tutorial.
 
-In the first part of your task, you will just run the preconfigured simulated topology. You can view it with the following command:
+In the first part of the session, you will just run the preconfigured simulated topology. You can view it with the following command:
 ``` bash
 cat configs/cluster/cluster.csv
 ``` 
@@ -71,7 +71,12 @@ The FL task is defined through the Python file `task.py`. First, check the templ
 cat configs/fl/task/task_template.py
 ```
 
-Then, edit the following file to define the FL task that will be deployed in the pipeline:
+In the first part of the session, you will run the pipeline with the preconfigured task. You can view it with the following command:
+``` bash
+cat configs/fl/task/task.py
+``` 
+
+Later, change the task that is run within the pipeline by editing the following file:
 
 ``` bash
 nano configs/fl/task/task.py
