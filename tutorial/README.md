@@ -1,6 +1,6 @@
 # AIoTwin 3rd Summer School: Hands-on Session on AIoTwin Orchestration Middleware
 
-These is the README for the **Hands-on Session on AIoTwin Orchestration Middleware Part II.: Framework for Adaptive Orchestration of FL Pipelines​**.
+This is the README for the **Hands-on Session on AIoTwin Orchestration Middleware Part II.: Framework for Adaptive Orchestration of FL Pipelines​**.
 This README shows step-by-step instructions for running an FL pipeline using our framework on the UNIZG-FER infrastructure.
 
 ## Prerequisites
@@ -11,7 +11,7 @@ The only prerequisite is to have a terminal for SSH connection (Linux/MacOS term
 
 Like in the Part I. of the session, open an SSH connection to the jump server. Then, create an SSH connection to the host that runs the FL orchestrator:
 ``` bash
-ssh ssh iotlab@hfl-k3s-master
+ssh iotlab@hfl-k3s-master
 ```
 
 Inside the `hfl-k3s-master` node, create a [Linux screen](https://linuxize.com/post/how-to-use-linux-screen/) to run multiple terminals from the same connection (replace X with your group number):
@@ -21,6 +21,7 @@ screen -S group-X
 ```
 
 In the screen mode, you can create new screens with `Ctrl+a c`, move between screens with `Ctrl+a N` (replace N with screen number), and detach from the screen with `Ctrl+x d`. To scroll within the screen mode, press `Ctrl+a Esc` and then move up and down with `Page Up` and `Page Down` keys.
+We recommend to open at least three screens for this hands on session.
 
 Each group will have their own orchestrator running on top of a K3s cluster, with 7 nodes assigned to their group for running the FL pipeline. Position your terminal to the root directory of the orchestrator given to your group (replace X with your group number):
 
@@ -49,7 +50,12 @@ The simulated topology is defined in the CSV file with the following columns: <b
 
 FL type can be global aggregator (GA), local aggregator (LA) or client, communication costs are defined towards the possible parent aggregators (from clients to LA's and from LA's to GA), and data distribution is not used in this tutorial.
 
-To configure a simulated topology of the experiment, open another screen and edit the following file (you can use `vim` editor if preferred):
+In the first part of your task, you will just run the preconfigured simulated topology. You can view it with the following command:
+``` bash
+cat configs/cluster/cluster.csv
+``` 
+
+Later, to change and configure a simulated topology of the experiment, edit the following file (you can use `vim` editor if preferred):
 
 ``` bash
 nano configs/cluster/cluster.csv
@@ -162,7 +168,7 @@ The safest way to remove and restart the pipeline in this tutorial is to kill th
 
 ```bash
 cd scripts
-./clenup.sh
+./cleanup.sh
 ```
 
 Due to the limited resource availability in the test cluster, wait for all the pods to be terminated before running another pipeline:

@@ -11,6 +11,10 @@ from flwr_datasets.partitioner import IidPartitioner
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor
 
+from torch.utils.data import DataLoader, Subset, random_split
+from torchvision.datasets import CIFAR10
+from torchvision.transforms import Compose, ToTensor, Normalize
+
 
 class Net(nn.Module):
     def __init__(self):
@@ -53,34 +57,36 @@ def set_weights(net, parameters):
 
 fds = None  # Cache FederatedDataset
 
-
 def load_data(partition_id: int, num_partitions: int, batch_size: int):
-    """Load partition CIFAR10 data."""
-    # Only initialize `FederatedDataset` once
-    global fds
-    if fds is None:
-        partitioner = IidPartitioner(num_partitions=num_partitions)
-        fds = FederatedDataset(
-            dataset="uoft-cs/cifar10",
-            partitioners={"train": partitioner},
-        )
-    partition = fds.load_partition(partition_id)
-    # Divide data on each node: 80% train, 20% test
-    partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
-    pytorch_transforms = Compose(
-        [ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-    )
+    """Load partitioned CIFAR-10 data using torchvision with manual partitioning."""
+    
+    transform = Compose([
+        ToTensor(),
+        Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
 
-    def apply_transforms(batch):
-        """Apply transforms to the partition from FederatedDataset."""
-        batch["img"] = [pytorch_transforms(img) for img in batch["img"]]
-        return batch
+    # Load the full CIFAR10 training set
+    full_dataset = CIFAR10(root="./data", train=True, download=True, transform=transform)
+    total_size = len(full_dataset)
 
-    partition_train_test = partition_train_test.with_transform(apply_transforms)
-    trainloader = DataLoader(
-        partition_train_test["train"], batch_size=batch_size, shuffle=True
-    )
-    testloader = DataLoader(partition_train_test["test"], batch_size=batch_size)
+    # Partition the dataset (iid assumption)
+    partition_size = total_size // num_partitions
+    start_idx = partition_id * partition_size
+    end_idx = start_idx + partition_size
+    indices = list(range(start_idx, end_idx))
+
+    # Get subset for the current partition
+    partition_dataset = Subset(full_dataset, indices)
+
+    # Split into train/test (e.g., 80% train, 20% test)
+    train_size = int(0.8 * len(partition_dataset))
+    test_size = len(partition_dataset) - train_size
+    train_subset, test_subset = random_split(partition_dataset, [train_size, test_size], generator=torch.Generator().manual_seed(42))
+
+    # Create DataLoaders
+    trainloader = DataLoader(train_subset, batch_size=batch_size, shuffle=True)
+    testloader = DataLoader(test_subset, batch_size=batch_size, shuffle=False)
+
     return trainloader, testloader
 
 
@@ -96,8 +102,10 @@ def train(net, trainloader, valloader, epochs, learning_rate, device):
         running_loss = 0.0
 
         for batch in trainloader:
-            images = batch["img"].to(device)
-            labels = batch["label"].to(device)
+            images, labels = batch
+            images = images.to(device)
+            labels = labels.to(device)
+
 
             optimizer.zero_grad()
             outputs = net(images)
@@ -129,8 +137,9 @@ def test(net, testloader, device):
 
     with torch.no_grad():
         for batch in testloader:
-            images = batch["img"].to(device)
-            labels = batch["label"].to(device)
+            images, labels = batch
+            images = images.to(device)
+            labels = labels.to(device)
 
             outputs = net(images)
             loss = criterion(outputs, labels)

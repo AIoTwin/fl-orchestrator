@@ -122,13 +122,13 @@ func (orch *FlOrchestrator) Stop() {
 
 func (orch *FlOrchestrator) deployFl() {
 	orch.deployGlobalAggregator(orch.configuration.GlobalAggregator)
-	time.Sleep(30 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	for _, localAggregator := range orch.configuration.LocalAggregators {
 		orch.deployLocalAggregator(localAggregator)
 		time.Sleep(1 * time.Second)
 	}
-	time.Sleep(60 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	for _, client := range orch.configuration.Clients {
 		client.BatchSize = orch.batchSize
