@@ -25,13 +25,13 @@ func main() {
 	modelSize, _ := strconv.ParseFloat(os.Args[1], 32)
 	communicationBudget, _ := strconv.ParseFloat(os.Args[2], 32)
 
-	costConfiguration := &cost.CostCofiguration{
-		CostType:            cost.TotalBudget_CostType,
-		CommunicationBudget: float32(communicationBudget),
+	costConfiguration := &cost.CostConfiguration{
+		CostType: cost.TotalBudget_CostType,
+		Budget:   float32(communicationBudget),
 	}
 
 	flOrchestrator, err := florch.NewFlOrchestrator(dummyOrchestrator, eventBus, logger, flconfig.Cent_Hier_ConfigModelName,
-		-1, -1, 32, 0.1, float32(modelSize), costConfiguration, false)
+		-1, -1, 32, 0.1, float32(modelSize), cost.COMMUNICATION, costConfiguration, false)
 	if err != nil {
 		logger.Error("Error creating orchestrator", "error", err)
 		return

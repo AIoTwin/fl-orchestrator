@@ -88,6 +88,10 @@ func (orch *DummyOrch) RemoveClient(client *model.FlClient) error {
 	return nil
 }
 
+func (orch *DummyOrch) GetClientLogs(clientsId string) (bytes.Buffer, error) {
+	return bytes.Buffer{}, nil
+}
+
 func threeNodesTestCluster() map[string]*model.Node {
 	return map[string]*model.Node{
 		"n1": {
