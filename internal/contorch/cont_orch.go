@@ -17,4 +17,5 @@ type IContainerOrchestrator interface {
 	RemoveLocalAggregator(aggregator *model.FlAggregator) error
 	CreateFlClient(client *model.FlClient, configFiles map[string]string) error
 	RemoveClient(client *model.FlClient) error
+	GetClientLogs(clientId string) (bytes.Buffer, error)
 }

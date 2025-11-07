@@ -121,6 +121,9 @@ func (orch *K8sOrchestrator) GetAvailableNodes(initialRequest bool) (map[string]
 		}
 
 		nodeModel := nodeCoreToNodeModel(nodeCore, nodeMetric)
+		if nodeModel == nil {
+			continue
+		}
 
 		nodes[nodeModel.Id] = nodeModel
 
@@ -431,6 +434,10 @@ func nodeCoreToNodeModel(nodeCore corev1.Node, nodeMetric v1beta1.NodeMetrics) *
 
 	nodeLabelsToNodeModel(nodeCore.Labels, nodeModel)
 
+	if nodeModel.FlType == "" {
+		return nil
+	}
+
 	return nodeModel
 }
 
@@ -490,4 +497,40 @@ func getHostIp(node corev1.Node) string {
 	}
 
 	return ""
+}
+func (orch *K8sOrchestrator) GetClientLogs(clientId string) (bytes.Buffer, error) {
+	// Get the deployment
+	deployment, err := orch.clientset.AppsV1().Deployments(corev1.NamespaceDefault).Get(context.TODO(),
+		common.GetClientDeploymentName(clientId), metav1.GetOptions{})
+	if err != nil {
+		return bytes.Buffer{}, fmt.Errorf("error retrieving deployment: %v", err)
+	}
+
+	// Get the selector from the deployment
+	labelSelector := metav1.FormatLabelSelector(deployment.Spec.Selector)
+
+	// List pods with the same labels
+	podList, err := orch.clientset.CoreV1().Pods(corev1.NamespaceDefault).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return bytes.Buffer{}, fmt.Errorf("error listing pods: %v", err)
+	}
+
+	// Get the logs of the pod
+	req := orch.clientset.CoreV1().Pods(corev1.NamespaceDefault).GetLogs(podList.Items[0].Name, &corev1.PodLogOptions{})
+	logs, err := req.Stream(context.TODO())
+	if err != nil {
+		return bytes.Buffer{}, err
+	}
+	defer logs.Close()
+
+	// Read the logs into a buffer
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(logs)
+	if err != nil {
+		return bytes.Buffer{}, err
+	}
+
+	return buf, nil
 }

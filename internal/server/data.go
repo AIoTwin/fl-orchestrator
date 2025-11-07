@@ -18,13 +18,14 @@ func fromJSON(i interface{}, r io.Reader) error {
 }
 
 type StartFlRequest struct {
-	Epochs             int32                 `json:"epochs"`
-	LocalRounds        int32                 `json:"localRounds"`
-	TrainingParams     TrainingParams        `json:"trainingParams"`
-	ModelSize          float32               `json:"modelSize"`
-	CostConfiguration  cost.CostCofiguration `json:"costConfiguration" `
-	ConfigurationModel string                `json:"configurationModel"`
-	RvaEnabled         bool                  `json:"rvaEnabled"`
+	Epochs             int32                  `json:"epochs"`
+	LocalRounds        int32                  `json:"localRounds"`
+	TrainingParams     TrainingParams         `json:"trainingParams"`
+	ModelSize          float32                `json:"modelSize"`
+	CostSource         cost.CostSource        `json:"costSource"`
+	CostConfiguration  cost.CostConfiguration `json:"costConfiguration" `
+	ConfigurationModel string                 `json:"configurationModel"`
+	RvaEnabled         bool                   `json:"rvaEnabled"`
 }
 
 type TrainingParams struct {

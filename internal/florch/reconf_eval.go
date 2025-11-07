@@ -37,7 +37,7 @@ func (orch *FlOrchestrator) evaluateReconfiguration() {
 	orch.logger.Info(fmt.Sprintf("Src predicted accuracy: %.2f", predictedAccuracy))
 
 	reconfigurationChangeCost := cost.GetReconfigurationChangeCost(orch.reconfigurationEvaluator.endConfig, orch.reconfigurationEvaluator.startConfig,
-		orch.nodesMap, orch.modelSize)
+		orch.nodesMap, orch.modelSize, orch.costSource)
 	orch.logger.Info(fmt.Sprintf("Reconf change cost: %.2f", reconfigurationChangeCost))
 
 	orch.reconfigurationEvaluator.endPp = performance.NewPerformancePrediction(orch.reconfigurationEvaluator.endAccuracies,
@@ -45,7 +45,7 @@ func (orch *FlOrchestrator) evaluateReconfiguration() {
 		int(orch.reconfigurationEvaluator.evaluationRound)-ReconfEvalWindow)
 
 	if orch.costConfiguration.CostType == cost.TotalBudget_CostType {
-		budgetRemaning := orch.costConfiguration.CommunicationBudget - orch.progress.communicationCost
+		budgetRemaning := orch.costConfiguration.Budget - orch.progress.currentCost
 		orch.logger.Info(fmt.Sprintf("Remaining budget: %.2f", budgetRemaning))
 
 		startRoundsRemaining := math.Floor(float64((budgetRemaning - reconfigurationChangeCost) / orch.reconfigurationEvaluator.startCostPerRound))

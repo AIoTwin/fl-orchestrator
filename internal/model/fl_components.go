@@ -10,6 +10,7 @@ type FlClient struct {
 	PartitionId      int32
 	BatchSize        int32
 	LearningRate     float32
+	ClientUtility    ClientUtility
 }
 
 type FlAggregator struct {

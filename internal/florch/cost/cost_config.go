@@ -1,9 +1,9 @@
 package cost
 
-type CostCofiguration struct {
-	CostType            string
-	CommunicationBudget float32
-	TargetAccuracy      float32
+type CostConfiguration struct {
+	CostType       string
+	Budget         float32
+	TargetAccuracy float32
 }
 
 const TotalBudget_CostType = "totalBudget"

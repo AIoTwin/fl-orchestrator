@@ -43,7 +43,7 @@ func (handler *Handler) StartFl(rw http.ResponseWriter, r *http.Request) {
 
 	flOrchestrator, err := florch.NewFlOrchestrator(handler.contOrch, handler.eventBus, handler.logger, request.ConfigurationModel,
 		request.Epochs, request.LocalRounds, request.TrainingParams.BatchSize, request.TrainingParams.LearningRate,
-		request.ModelSize, &request.CostConfiguration, request.RvaEnabled)
+		request.ModelSize, request.CostSource, &request.CostConfiguration, request.RvaEnabled)
 	if err != nil {
 		handler.logger.Error("erorr starting FL", "error", err)
 		rw.WriteHeader(http.StatusBadRequest)

@@ -40,6 +40,7 @@ func GetAvailableNodesFromFile() (map[string]*model.Node, error) {
 			}
 		} */
 
+		energyCost, _ := strconv.ParseFloat(record[3], 32)
 		numPartitions, _ := strconv.Atoi(record[4])
 		partitionId, _ := strconv.Atoi(record[5])
 
@@ -48,6 +49,7 @@ func GetAvailableNodesFromFile() (map[string]*model.Node, error) {
 			Resources:          model.NodeResources{},
 			FlType:             record[1],
 			CommunicationCosts: communicationCosts,
+			EnergyCost:         float32(energyCost),
 			DataDistribution:   dataDistributions,
 			NumPartitions:      int32(numPartitions),
 			PartitionId:        int32(partitionId),
@@ -183,4 +185,17 @@ func GetClientConfigMapName(clientId string) string {
 
 func GetClientDeploymentName(clientId string) string {
 	return fmt.Sprintf("%s-%s", FL_CLIENT_DEPLOYMENT_PREFIX, clientId)
+}
+
+func CalculateAverageFloat64(numbers []float64) float64 {
+	if len(numbers) == 0 {
+		return 0
+	}
+
+	var sum float64
+	for _, number := range numbers {
+		sum += number
+	}
+
+	return sum / float64(len(numbers))
 }

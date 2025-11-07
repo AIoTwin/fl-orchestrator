@@ -5,6 +5,7 @@ type Node struct {
 	InternalIp         string
 	Resources          NodeResources
 	FlType             string
+	EnergyCost         float32
 	CommunicationCosts map[string]float32 // destination node ID -> cost
 	DataDistribution   map[string]int64   // class ID -> number of samples
 	NumPartitions      int32
