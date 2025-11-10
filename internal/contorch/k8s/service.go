@@ -12,8 +12,7 @@ import (
 func BuildGlobalAggregatorService(flAggregator *model.FlAggregator) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.GetGlobalAggregatorServiceName(flAggregator.Id),
-			Namespace: corev1.NamespaceDefault,
+			Name: common.GetGlobalAggregatorServiceName(flAggregator.Id),
 		},
 		Spec: corev1.ServiceSpec{
 			ClusterIP: "None",
@@ -34,8 +33,7 @@ func BuildGlobalAggregatorService(flAggregator *model.FlAggregator) *corev1.Serv
 func BuildLocalAggregatorService(flAggregator *model.FlAggregator) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.GetLocalAggregatorServiceName(flAggregator.Id),
-			Namespace: corev1.NamespaceDefault,
+			Name: common.GetLocalAggregatorServiceName(flAggregator.Id),
 		},
 		Spec: corev1.ServiceSpec{
 			ClusterIP: "None",

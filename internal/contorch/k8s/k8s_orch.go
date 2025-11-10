@@ -38,9 +38,10 @@ type K8sOrchestrator struct {
 	simulation         bool
 	simulationNodes    []string
 	lastSimulationNode int
+	namespace          string
 }
 
-func NewK8sOrchestrator(configFilePath string, eventBus *events.EventBus, simulation bool) (*K8sOrchestrator, error) {
+func NewK8sOrchestrator(configFilePath string, eventBus *events.EventBus, simulation bool, namespace string) (*K8sOrchestrator, error) {
 	// connect to Kubernetes cluster
 	config, err := clientcmd.BuildConfigFromFlags("", configFilePath)
 	if err != nil {
@@ -74,6 +75,7 @@ func NewK8sOrchestrator(configFilePath string, eventBus *events.EventBus, simula
 			"hfl-n21", "hfl-n22", "hfl-n23", "hfl-n24", "hfl-n25", "hfl-n26", "hfl-n27",
 			"hfl-n28", "hfl-n29", "hfl-n30"},
 		lastSimulationNode: 0,
+		namespace:          namespace,
 	}, nil
 }
 
@@ -189,7 +191,7 @@ func (orch *K8sOrchestrator) CreateGlobalAggregator(aggregator *model.FlAggregat
 
 func (orch *K8sOrchestrator) GetGlobalAggregatorLogs() (bytes.Buffer, error) {
 	// Get the deployment
-	deployment, err := orch.clientset.AppsV1().Deployments(corev1.NamespaceDefault).Get(context.TODO(),
+	deployment, err := orch.clientset.AppsV1().Deployments(orch.namespace).Get(context.TODO(),
 		common.GLOBAL_AGGRETATOR_DEPLOYMENT_NAME, metav1.GetOptions{})
 	if err != nil {
 		return bytes.Buffer{}, fmt.Errorf("error retrieving deployment: %v", err)
@@ -199,7 +201,7 @@ func (orch *K8sOrchestrator) GetGlobalAggregatorLogs() (bytes.Buffer, error) {
 	labelSelector := metav1.FormatLabelSelector(deployment.Spec.Selector)
 
 	// List pods with the same labels
-	podList, err := orch.clientset.CoreV1().Pods(corev1.NamespaceDefault).List(context.TODO(), metav1.ListOptions{
+	podList, err := orch.clientset.CoreV1().Pods(orch.namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
@@ -207,7 +209,7 @@ func (orch *K8sOrchestrator) GetGlobalAggregatorLogs() (bytes.Buffer, error) {
 	}
 
 	// Get the logs of the pod
-	req := orch.clientset.CoreV1().Pods(corev1.NamespaceDefault).GetLogs(podList.Items[0].Name, &corev1.PodLogOptions{})
+	req := orch.clientset.CoreV1().Pods(orch.namespace).GetLogs(podList.Items[0].Name, &corev1.PodLogOptions{})
 	logs, err := req.Stream(context.TODO())
 	if err != nil {
 		return bytes.Buffer{}, err
@@ -330,12 +332,12 @@ func (orch *K8sOrchestrator) RemoveClient(client *model.FlClient) error {
 }
 
 func (orch *K8sOrchestrator) createConfigMapFromFiles(configMapName string, filesData map[string]string) error {
-	configMapsClient := orch.clientset.CoreV1().ConfigMaps(corev1.NamespaceDefault)
+	configMapsClient := orch.clientset.CoreV1().ConfigMaps(orch.namespace)
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configMapName,
-			Namespace: corev1.NamespaceDefault,
+			Namespace: orch.namespace,
 		},
 		Data: filesData,
 	}
@@ -350,7 +352,7 @@ func (orch *K8sOrchestrator) createConfigMapFromFiles(configMapName string, file
 }
 
 func (orch *K8sOrchestrator) deleteConfigMap(configMapName string) error {
-	configMapsClient := orch.clientset.CoreV1().ConfigMaps(corev1.NamespaceDefault)
+	configMapsClient := orch.clientset.CoreV1().ConfigMaps(orch.namespace)
 
 	if err := configMapsClient.Delete(context.TODO(), configMapName, metav1.DeleteOptions{}); err != nil {
 		return err
@@ -360,7 +362,7 @@ func (orch *K8sOrchestrator) deleteConfigMap(configMapName string) error {
 }
 
 func (orch *K8sOrchestrator) createDeployment(deployment *appsv1.Deployment) error {
-	deploymentsClient := orch.clientset.AppsV1().Deployments(corev1.NamespaceDefault)
+	deploymentsClient := orch.clientset.AppsV1().Deployments(orch.namespace)
 
 	_, err := deploymentsClient.Create(context.TODO(), deployment, metav1.CreateOptions{})
 
@@ -368,7 +370,7 @@ func (orch *K8sOrchestrator) createDeployment(deployment *appsv1.Deployment) err
 }
 
 func (orch *K8sOrchestrator) deleteDeployment(deploymentName string) error {
-	deploymentsClient := orch.clientset.AppsV1().Deployments(corev1.NamespaceDefault)
+	deploymentsClient := orch.clientset.AppsV1().Deployments(orch.namespace)
 
 	if err := deploymentsClient.Delete(context.TODO(), deploymentName, metav1.DeleteOptions{}); err != nil {
 		return err
@@ -378,7 +380,7 @@ func (orch *K8sOrchestrator) deleteDeployment(deploymentName string) error {
 }
 
 func (orch *K8sOrchestrator) createService(service *corev1.Service) error {
-	servicesClient := orch.clientset.CoreV1().Services(corev1.NamespaceDefault)
+	servicesClient := orch.clientset.CoreV1().Services(orch.namespace)
 
 	_, err := servicesClient.Create(context.TODO(), service, metav1.CreateOptions{})
 	if err != nil {
@@ -389,7 +391,7 @@ func (orch *K8sOrchestrator) createService(service *corev1.Service) error {
 }
 
 func (orch *K8sOrchestrator) deleteService(serviceName string) error {
-	servicesClient := orch.clientset.CoreV1().Services(corev1.NamespaceDefault)
+	servicesClient := orch.clientset.CoreV1().Services(orch.namespace)
 
 	if err := servicesClient.Delete(context.TODO(), serviceName, metav1.DeleteOptions{}); err != nil {
 		return err
