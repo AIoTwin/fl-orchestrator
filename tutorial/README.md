@@ -1,4 +1,4 @@
-# AIoTwin 3rd Summer School: Hands-on Session on AIoTwin Orchestration Middleware
+# Hands-on Session on AIoTwin Orchestration Middleware
 
 This is the README for the **Hands-on Session on AIoTwin Orchestration Middleware Part II.: Framework for Adaptive Orchestration of FL Pipelines​**.
 This README shows step-by-step instructions for running an FL pipeline using our framework on the UNIZG-FER infrastructure.
@@ -26,7 +26,7 @@ We recommend to open at least three screens for this hands on session.
 Each group will have their own orchestrator running on top of a K3s cluster, with 7 nodes assigned to their group for running the FL pipeline. Position your terminal to the root directory of the orchestrator given to your group (replace X with your group number):
 
 ``` bash
-cd aiotwin-tutorial/group-X/fl-orchestrator/
+cd iot-conf-tutorial/group-X/fl-orchestrator/
 ```
 
 Run all the following commands from that root directory.
@@ -37,7 +37,7 @@ Position your terminal to the main directory of the HTTP server that exposes orc
 
 ``` bash
 cd cmd/http
-go run main.go sim
+go run main.go sim group-X
 ```
 ```
 2025-06-10T15:55:34.396+0200 [INFO]  fl-orch: Starting server on port: 8081
@@ -46,7 +46,7 @@ go run main.go sim
 ### Configuring the topology
 
 The simulated topology is defined in the CSV file with the following columns: <br/>
-`node_id,fl_type,communication_costs,data_distribution,num_partitions,partition_id`. 
+`node_id,fl_type,communication_costs,energy_cost,num_partitions,partition_id`. 
 
 FL type can be global aggregator (GA), local aggregator (LA) or client, communication costs are defined towards the possible parent aggregators (from clients to LA's and from LA's to GA), and data distribution is not used in this tutorial.
 
@@ -90,19 +90,20 @@ To start an FL pipeline, send a POST request to `http://161.53.133.104:80/group-
 
 ```json
 {
-    "epochs": 2,
-    "localRounds": 2,
-    "trainingParams": {
-        "batchSize": 128,
-        "learningRate": 0.1
-    },
-    "configurationModel": "minCommCost",
-    "modelSize": 3.3,
-    "costConfiguration": {
-        "costType": "totalBudget",
-        "communicationBudget": 100000
-    },
-    "rvaEnabled": true
+    "epochs": 3,
+    "localRounds": 2,
+    "trainingParams": {
+        "batchSize": 32,
+        "learningRate": 0.01
+    },
+    "configurationModel": "minCommCost",
+    "modelSize": 3.3,
+    "costSource" : "COMMUNICATION",
+    "costConfiguration": {
+        "costType": "totalBudget",
+        "budget": 150000
+    },
+    "rvaEnabled": true
 }
 ```
 
@@ -145,7 +146,7 @@ Local rounds:  2
 
 Note that local aggregators are deployed 30 seconds after the global aggregator, and the clients are deployed 60 secodns after local aggregators, so that the parent aggregators have enough time to initialize before their childs are connected. Also, the client program will take some time to start becuase in the beginning it is downloading the full dataset which is split to get the client partition.
 
-Since the FL services are deployed on K3s, check the pods that are running the services (use the namespace for your group, i.e. `group-1`):
+Since the FL services are deployed on K3s, check the pods that are running the services (use the group-X for your group, i.e. `group-1`):
 
 ```bash
 kubectl -n group-X get pods
@@ -173,7 +174,7 @@ The safest way to remove and restart the pipeline in this tutorial is to kill th
 
 ```bash
 cd scripts
-./cleanup.sh
+./cleanup.sh group-X
 ```
 
 Due to the limited resource availability in the test cluster, wait for all the pods to be terminated before running another pipeline:
@@ -182,5 +183,5 @@ Due to the limited resource availability in the test cluster, wait for all the p
 kubectl -n group-X get pods
 ```
 ```
-No resources found in group-X namespace.
+No resources found in group-X group-X.
 ```
