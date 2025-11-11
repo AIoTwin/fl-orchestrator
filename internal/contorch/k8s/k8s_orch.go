@@ -41,7 +41,7 @@ type K8sOrchestrator struct {
 	namespace          string
 }
 
-func NewK8sOrchestrator(configFilePath string, eventBus *events.EventBus, simulation bool, namespace string) (*K8sOrchestrator, error) {
+func NewK8sOrchestrator(configFilePath string, simulationNodes []string, eventBus *events.EventBus, simulation bool, namespace string) (*K8sOrchestrator, error) {
 	// connect to Kubernetes cluster
 	config, err := clientcmd.BuildConfigFromFlags("", configFilePath)
 	if err != nil {
@@ -62,18 +62,14 @@ func NewK8sOrchestrator(configFilePath string, eventBus *events.EventBus, simula
 	}
 
 	return &K8sOrchestrator{
-		config:           config,
-		clientset:        clientset,
-		metricsClientset: metricsClientset,
-		eventBus:         eventBus,
-		cronScheduler:    cron.New(cron.WithSeconds()),
-		availableNodes:   make(map[string]*model.Node),
-		simulation:       simulation,
-		simulationNodes: []string{"hfl-n1", "hfl-n2", "hfl-n3", "hfl-n4", "hfl-n5", "hfl-n6",
-			"hfl-n7", "hfl-n8", "hfl-n9", "hfl-n10", "hfl-n11", "hfl-n12", "hfl-n13",
-			"hfl-n14", "hfl-n15", "hfl-n16", "hfl-n17", "hfl-n18", "hfl-n19", "hfl-n20",
-			"hfl-n21", "hfl-n22", "hfl-n23", "hfl-n24", "hfl-n25", "hfl-n26", "hfl-n27",
-			"hfl-n28", "hfl-n29", "hfl-n30"},
+		config:             config,
+		clientset:          clientset,
+		metricsClientset:   metricsClientset,
+		eventBus:           eventBus,
+		cronScheduler:      cron.New(cron.WithSeconds()),
+		availableNodes:     make(map[string]*model.Node),
+		simulation:         simulation,
+		simulationNodes:    simulationNodes,
 		lastSimulationNode: 0,
 		namespace:          namespace,
 	}, nil

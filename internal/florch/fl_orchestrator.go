@@ -160,7 +160,7 @@ func (orch *FlOrchestrator) Stop() {
 
 func (orch *FlOrchestrator) deployFl() {
 	orch.deployGlobalAggregator(orch.configuration.GlobalAggregator)
-	time.Sleep(100 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	for _, localAggregator := range orch.configuration.LocalAggregators {
 		orch.deployLocalAggregator(localAggregator)
@@ -212,7 +212,7 @@ func (orch *FlOrchestrator) reconfigure(newConfiguration *flconfig.FlConfigurati
 		}
 	}
 
-	time.Sleep(90 * time.Second)
+	time.Sleep(60 * time.Second)
 	orch.logger.Info("Deploying new configuration...")
 
 	for _, newClient := range newConfiguration.Clients {
@@ -523,17 +523,15 @@ func (orch *FlOrchestrator) monitorFlProgress() {
 					}
 					orch.nodesMap = nodesMap
 
-					fmt.Printf("BEFOREEE ::")
-					for _, client := range orch.configuration.Clients {
-						fmt.Printf("%s\n", client.Id)
-					}
+					//for _, client := range orch.configuration.Clients {
+					//	fmt.Printf("%s\n", client.Id)
+					//}
 
 					orch.runReconfigurationModel()
 
-					fmt.Printf("NEW CONFIGGGGG!!!!!!::")
-					for _, client := range orch.configuration.Clients {
-						fmt.Printf("%s\n", client.Id)
-					}
+					//for _, client := range orch.configuration.Clients {
+					//	fmt.Printf("%s\n", client.Id)
+					//}
 
 				}
 			}
@@ -541,7 +539,7 @@ func (orch *FlOrchestrator) monitorFlProgress() {
 			orch.progress.globalRound++
 		}
 
-		time.Sleep(90 * time.Second)
+		time.Sleep(60 * time.Second)
 	}
 }
 

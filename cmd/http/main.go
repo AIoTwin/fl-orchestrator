@@ -9,7 +9,13 @@ import (
 	"github.com/AIoTwin-Adaptive-FL-Orch/fl-orchestrator/internal/server"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/go-hclog"
+
+	"gopkg.in/yaml.v3"
 )
+
+type Group struct {
+	SimulationNodes []string `yaml:"simulationNodes"`
+}
 
 func main() {
 	_ = os.Mkdir("log", 0777)
@@ -42,11 +48,28 @@ func main() {
 	}
 
 	k8sConfigFilePath := "../../configs/cluster/kube_config.yaml"
-	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator(k8sConfigFilePath, eventBus, simulation, namespace)
+	k8sConfigNodesPath := "../../configs/cluster/group_nodes.yaml"
+
+	data, err := os.ReadFile(k8sConfigNodesPath)
+	if err != nil {
+		panic(err)
+	}
+
+	// Parse the YAML into a map of groups
+	var groups map[string]Group
+	if err := yaml.Unmarshal(data, &groups); err != nil {
+		panic(err)
+	}
+
+	simulationNodes := groups[namespace].SimulationNodes
+
+	k8sOrchestrator, err := k8sorch.NewK8sOrchestrator(k8sConfigFilePath, simulationNodes, eventBus, simulation, namespace)
 	if err != nil {
 		logger.Error("Error while initializing k8s client ::", err.Error())
 		return
 	}
+
+	logger.Info("Hello ", namespace)
 
 	handler := server.NewHandler(logger, eventBus, k8sOrchestrator)
 

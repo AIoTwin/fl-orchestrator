@@ -1,0 +1,39 @@
+group-1:
+  simulationNodes:
+    - hfl-n1
+    - hfl-n2
+    - hfl-n3
+    - hfl-n4
+    - hfl-n5
+    - hfl-n6
+    - hfl-n7
+
+group-2:
+  simulationNodes:
+    - hfl-n8
+    - hfl-n9
+    - hfl-n10
+    - hfl-n11
+    - hfl-n12
+    - hfl-n13
+    - hfl-n14
+
+group-3:
+  simulationNodes:
+    - hfl-n15
+    - hfl-n16
+    - hfl-n17
+    - hfl-n18
+    - hfl-n19
+    - hfl-n20
+    - hfl-n21
+
+group-4:
+  simulationNodes:
+    - hfl-n22
+    - hfl-n23
+    - hfl-n24
+    - hfl-n25
+    - hfl-n26
+    - hfl-n27
+    - hfl-n28
