@@ -90,7 +90,7 @@ To start an FL pipeline, send a POST request to `http://161.53.133.104:80/group-
 
 ```json
 {
-    "epochs": 3,
+    "epochs": 2,
     "localRounds": 2,
     "trainingParams": {
         "batchSize": 32,
