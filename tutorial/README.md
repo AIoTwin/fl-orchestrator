@@ -101,7 +101,7 @@ To start an FL pipeline, send a POST request to `http://161.53.133.104:80/group-
     "costSource" : "COMMUNICATION",
     "costConfiguration": {
         "costType": "totalBudget",
-        "budget": 15500
+        "budget": 17000
     },
     "rvaEnabled": true
 }
