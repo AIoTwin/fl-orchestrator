@@ -88,7 +88,7 @@ You can see examples of an FL task training on CIFAR-10 or MNIST datasets in the
 
 To start an FL pipeline, send a POST request to `http://161.53.133.104:80/group-X/fl/start` (replace X with your group number, e.g. `group-1`). Send the request with Postman and provide the following request body (set the type to raw -> JSON):
 
-```json
+```
 {
     "epochs": 2,
     "localRounds": 2,
