@@ -31,8 +31,15 @@ cd iot-conf-tutorial/group-X/fl-orchestrator/
 
 Run all the following commands from that root directory.
 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
 ## Part 1. Running a Default Task - Performance Degradation
 Default setups show performance degradation when a new node is added to the cluster. The topology is illustrated below:
+
+<img src="performance-degradation.png" width="600" height="400">
+
+
 
 ### Starting the orchestrator
 
@@ -52,26 +59,117 @@ To start an FL pipeline, send a POST request to `http://161.53.133.104:80/group-
 
 ```
 {
-    "epochs": 1,
-    "localRounds": 2,
-    "trainingParams": {
-        "batchSize": 32,
-        "learningRate": 0.005
-    },
-    "configurationModel": "minCommCost",
-    "modelSize": 3.3,
-    "costSource" : "COMMUNICATION",
-    "costConfiguration": {
-        "costType": "totalBudget",
-        "budget": 17000
-    },
-    "rvaEnabled": true
+  "epochs": 1,
+  "localRounds": 2,
+  "trainingParams": {
+    "batchSize": 32,
+    "learningRate": 0.001
+  },
+  "configurationModel": "minCommCost",
+  "modelSize": 3.3,
+  "costSource": "COMMUNICATION",
+  "costConfiguration": {
+    "costType": "totalBudget",
+    "budget": 17000
+  },
+  "rvaEnabled": true
 }
 ```
 
+
+### Monitoring the pipeline progress
+
+To monitor the progress of the pipeline, first check the orchestrator's logs, to make sure that the pipeline was successfully deployed, see how the nodes are clustered, and later you can also monitor the progress of the model performance over global rounds (model accuracy and loss). In the beginning, it should look something like this:
+
+```
+2025-06-11T12:51:17.366+0200 [INFO]  fl-orch: Starting server on port: 8081
+2025-06-11T12:51:23.688+0200 [INFO]  fl-orch: Starting FL with config minCommCost, modelSize 3.300000, and cost type totalBudget
+Optimal clusters: [n4 n5] [n7 n6] 
+Cost per global round: 1188.00
+2025-06-11T12:51:23.688+0200 [INFO]  fl-orch: Global aggregator ::
+        Node id:n1      | Rounds:100
+Local aggregators ::
+        Node id:n2      | Parent address:fl-ga-svc-n1:8080      | Local rounds:2 Rounds:100
+        Node id:n3      | Parent address:fl-ga-svc-n1:8080      | Local rounds:2 Rounds:100
+Clients ::
+        Node id:n4      | Parent node:n2        | Epochs:2
+        Node id:n5      | Parent node:n2        | Epochs:2
+        Node id:n7      | Parent node:n3        | Epochs:2
+        Node id:n6      | Parent node:n3        | Epochs:2
+Epochs:  2
+Local rounds:  2
+
+2025-06-11T12:51:23.701+0200 [INFO]  fl-orch: Global aggregator deployed!
+2025-06-11T12:51:53.727+0200 [INFO]  fl-orch: Local aggregator deployed!
+2025-06-11T12:51:54.736+0200 [INFO]  fl-orch: Local aggregator deployed!
+2025-06-11T12:52:55.742+0200 [INFO]  fl-orch: Client n4 deployed!
+2025-06-11T12:52:56.747+0200 [INFO]  fl-orch: Client n5 deployed!
+2025-06-11T12:52:57.753+0200 [INFO]  fl-orch: Client n7 deployed!
+2025-06-11T12:52:58.759+0200 [INFO]  fl-orch: Client n6 deployed!
+2025-06-11T12:52:59.822+0200 [INFO]  fl-orch: Finished global round 0
+2025-06-11T12:52:59.822+0200 [INFO]  fl-orch: Latest accuracy: 0.10
+2025-06-11T12:52:59.822+0200 [INFO]  fl-orch: Latest loss: 2.30
+2025-06-11T12:52:59.822+0200 [INFO]  fl-orch: Started global round 1
+```
+
+Note that local aggregators are deployed before the global aggregator finishes initializing, and clients are deployed after the local aggregators are ready. This ensures that each parent aggregator is fully initialized before its child nodes attempt to connect.
+
+Since the FL services are deployed on K3s, check the pods that are running the services (use the group-X for your group, i.e. `group-1`):
+
+```bash
+kubectl -n group-X get pods
+```
+```
+NAME                        READY   STATUS    RESTARTS   AGE
+fl-cl-n4-55b9cbccc7-zrk2s   1/1     Running   0          2m42s
+fl-cl-n5-76b7d8866-8562z    1/1     Running   0          2m41s
+fl-cl-n6-69d8f95c56-wpwp7   1/1     Running   0          2m39s
+fl-cl-n7-59559688cf-6t6jw   1/1     Running   0          2m40s
+fl-ga-bc87b7559-pr7fd       1/1     Running   0          4m14s
+fl-la-n2-5499d6c748-67ljh   1/1     Running   0          3m44s
+fl-la-n3-5b6bf567c9-k4cz4   1/1     Running   0          3m43s
+```
+
+Finally, to see the logs of a client (or any pod running the FL service), run the following command (replace the pod name with your pod):
+
+```bash
+kubectl -n group-X logs fl-cl-n4-55b9cbccc7-zrk2s
+```
+
+### See accuracy/loss/cost progress logs
+
+```bash
+cd experiments/results
+cat "$(ls -Art | tail -n 1)" # fetch latest experiment logs
+```
+To plot accuracy/cost use:
+https://colab.research.google.com/drive/1o4Wfo98heE7ZrsZqTMYdOcqnCyTWF2fQ?usp=sharing
+
+### Removing the pipeline
+
+The safest way to remove and restart the pipeline in this tutorial is to kill the orchestrator (`Ctrl+C` in the terminal where it was started) and run the cleanup script:
+
+```bash
+cd scripts
+./cleanup.sh group-X
+```
+
+Due to the limited resource availability in the test cluster, wait for all the pods to be terminated before running another pipeline:
+
+```bash
+kubectl -n group-X get pods
+```
+```
+No resources found in group-X group-X.
+```
+
+
+
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Once you run the pipeline with default parameters, try pipelines with different HFL parameters (`epochs` and `localRounds`) and training parameters to see their impact on the model performance.
-
-
 
 
 
@@ -118,86 +216,4 @@ You can see examples of an FL task training on CIFAR-10 or MNIST datasets in the
 
 
 
-### Monitoring the pipeline progress
 
-To monitor the progress of the pipeline, first check the orchestrator's logs, to make sure that the pipeline was successfully deployed, see how the nodes are clustered, and later you can also monitor the progress of the model performance over global rounds (model accuracy and loss). In the beginning, it should look something like this:
-
-```
-2025-06-11T12:51:17.366+0200 [INFO]  fl-orch: Starting server on port: 8081
-2025-06-11T12:51:23.688+0200 [INFO]  fl-orch: Starting FL with config minCommCost, modelSize 3.300000, and cost type totalBudget
-Optimal clusters: [n4 n5] [n7 n6] 
-Cost per global round: 1188.00
-2025-06-11T12:51:23.688+0200 [INFO]  fl-orch: Global aggregator ::
-        Node id:n1      | Rounds:100
-Local aggregators ::
-        Node id:n2      | Parent address:fl-ga-svc-n1:8080      | Local rounds:2 Rounds:100
-        Node id:n3      | Parent address:fl-ga-svc-n1:8080      | Local rounds:2 Rounds:100
-Clients ::
-        Node id:n4      | Parent node:n2        | Epochs:2
-        Node id:n5      | Parent node:n2        | Epochs:2
-        Node id:n7      | Parent node:n3        | Epochs:2
-        Node id:n6      | Parent node:n3        | Epochs:2
-Epochs:  2
-Local rounds:  2
-
-2025-06-11T12:51:23.701+0200 [INFO]  fl-orch: Global aggregator deployed!
-2025-06-11T12:51:53.727+0200 [INFO]  fl-orch: Local aggregator deployed!
-2025-06-11T12:51:54.736+0200 [INFO]  fl-orch: Local aggregator deployed!
-2025-06-11T12:52:55.742+0200 [INFO]  fl-orch: Client n4 deployed!
-2025-06-11T12:52:56.747+0200 [INFO]  fl-orch: Client n5 deployed!
-2025-06-11T12:52:57.753+0200 [INFO]  fl-orch: Client n7 deployed!
-2025-06-11T12:52:58.759+0200 [INFO]  fl-orch: Client n6 deployed!
-2025-06-11T12:52:59.822+0200 [INFO]  fl-orch: Finished global round 0
-2025-06-11T12:52:59.822+0200 [INFO]  fl-orch: Latest accuracy: 0.10
-2025-06-11T12:52:59.822+0200 [INFO]  fl-orch: Latest loss: 2.30
-2025-06-11T12:52:59.822+0200 [INFO]  fl-orch: Started global round 1
-```
-
-Note that local aggregators are deployed 30 seconds after the global aggregator, and the clients are deployed 60 secodns after local aggregators, so that the parent aggregators have enough time to initialize before their childs are connected. Also, the client program will take some time to start becuase in the beginning it is downloading the full dataset which is split to get the client partition.
-
-Since the FL services are deployed on K3s, check the pods that are running the services (use the group-X for your group, i.e. `group-1`):
-
-```bash
-kubectl -n group-X get pods
-```
-```
-NAME                        READY   STATUS    RESTARTS   AGE
-fl-cl-n4-55b9cbccc7-zrk2s   1/1     Running   0          2m42s
-fl-cl-n5-76b7d8866-8562z    1/1     Running   0          2m41s
-fl-cl-n6-69d8f95c56-wpwp7   1/1     Running   0          2m39s
-fl-cl-n7-59559688cf-6t6jw   1/1     Running   0          2m40s
-fl-ga-bc87b7559-pr7fd       1/1     Running   0          4m14s
-fl-la-n2-5499d6c748-67ljh   1/1     Running   0          3m44s
-fl-la-n3-5b6bf567c9-k4cz4   1/1     Running   0          3m43s
-```
-
-Finally, to see the logs of a client (or any pod running the FL service), run the following command (replace the pod name with your pod):
-
-```bash
-kubectl -n group-X logs fl-cl-n4-55b9cbccc7-zrk2s
-```
-
-### See accuracy/loss/cost progress logs
-
-```
-cd experiments/results
-cat "$(ls -Art | tail -n 1)"
-```
-
-### Removing the pipeline
-
-The safest way to remove and restart the pipeline in this tutorial is to kill the orchestrator (`Ctrl+C` in the terminal where it was started) and run the cleanup script:
-
-```bash
-cd scripts
-./cleanup.sh group-X
-```
-
-Due to the limited resource availability in the test cluster, wait for all the pods to be terminated before running another pipeline:
-
-```bash
-kubectl -n group-X get pods
-```
-```
-No resources found in group-X group-X.
-```
