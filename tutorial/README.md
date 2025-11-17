@@ -31,6 +31,9 @@ cd iot-conf-tutorial/group-X/fl-orchestrator/
 
 Run all the following commands from that root directory.
 
+## Part 1. Running a Default Task - Performance Degradation
+Default setups show performance degradation when a new node is added to the cluster. The topology is illustrated below:
+
 ### Starting the orchestrator
 
 Position your terminal to the main directory of the HTTP server that exposes orchestrator functionalities and start the server:
@@ -42,6 +45,35 @@ go run main.go sim group-X
 ```
 2025-06-10T15:55:34.396+0200 [INFO]  fl-orch: Starting server on port: 8081
 ```
+
+### Starting an FL pipeline
+
+To start an FL pipeline, send a POST request to `http://161.53.133.104:80/group-X/fl/start` (replace X with your group number, e.g. `group-1`). Send the request with Postman and provide the following request body (set the type to raw -> JSON):
+
+```
+{
+    "epochs": 1,
+    "localRounds": 2,
+    "trainingParams": {
+        "batchSize": 32,
+        "learningRate": 0.005
+    },
+    "configurationModel": "minCommCost",
+    "modelSize": 3.3,
+    "costSource" : "COMMUNICATION",
+    "costConfiguration": {
+        "costType": "totalBudget",
+        "budget": 17000
+    },
+    "rvaEnabled": true
+}
+```
+
+Once you run the pipeline with default parameters, try pipelines with different HFL parameters (`epochs` and `localRounds`) and training parameters to see their impact on the model performance.
+
+
+
+
 
 ### Configuring the topology
 
@@ -84,30 +116,7 @@ nano configs/fl/task/task.py
 
 You can see examples of an FL task training on CIFAR-10 or MNIST datasets in the directory `configs/fl/task/examples`.
 
-### Starting an FL pipeline
 
-To start an FL pipeline, send a POST request to `http://161.53.133.104:80/group-X/fl/start` (replace X with your group number, e.g. `group-1`). Send the request with Postman and provide the following request body (set the type to raw -> JSON):
-
-```
-{
-    "epochs": 1,
-    "localRounds": 2,
-    "trainingParams": {
-        "batchSize": 32,
-        "learningRate": 0.005
-    },
-    "configurationModel": "minCommCost",
-    "modelSize": 3.3,
-    "costSource" : "COMMUNICATION",
-    "costConfiguration": {
-        "costType": "totalBudget",
-        "budget": 17000
-    },
-    "rvaEnabled": true
-}
-```
-
-Once you run the pipeline with default parameters, try pipelines with different HFL parameters (`epochs` and `localRounds`) and training parameters to see their impact on the model performance.
 
 ### Monitoring the pipeline progress
 
