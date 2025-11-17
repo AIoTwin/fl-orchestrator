@@ -168,6 +168,13 @@ Finally, to see the logs of a client (or any pod running the FL service), run th
 kubectl -n group-X logs fl-cl-n4-55b9cbccc7-zrk2s
 ```
 
+### See accuracy/loss/cost progress logs
+
+```
+cd experiments/results
+cat "$(ls -Art | tail -n 1)"
+```
+
 ### Removing the pipeline
 
 The safest way to remove and restart the pipeline in this tutorial is to kill the orchestrator (`Ctrl+C` in the terminal where it was started) and run the cleanup script:
