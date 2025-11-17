@@ -87,7 +87,7 @@ def load_data_full_dataset(batch_size: int):
 def load_data(partition_id: int, num_partitions: int, batch_size: int):
 
     # Global Aggregator
-    if num_partitions == 0:
+    if num_partitions == 1:
         return load_data_full_dataset(batch_size)
 
     global fds_fed_full, fds_fed_noniid
