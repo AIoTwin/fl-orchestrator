@@ -64,17 +64,21 @@ def _apply_transforms(batch):
 
 
 def load_data_full_dataset(batch_size: int):
-    """Use the entire CIFAR-10 train split (80/20 train/test)."""
     global fds_central
 
     if fds_central is None:
-        # No partitioners -> we get the raw splits
+        # IID partitioner with a single partition (full dataset)
+        iid_partitioner = IidPartitioner(num_partitions=1)
+
         fds_central = FederatedDataset(
             dataset="uoft-cs/cifar10",
+            partitioners={"train": iid_partitioner},
         )
 
-    full_train = fds_central.load_split("train")
-    split = full_train.train_test_split(test_size=0.2, seed=42)
+    # Load the only partition (id = 0)
+    partition = fds_central.load_partition(0)
+
+    split = partition.train_test_split(test_size=0.5, seed=42)
 
     train_ds = split["train"].with_transform(_apply_transforms)
     test_ds = split["test"].with_transform(_apply_transforms)
@@ -83,6 +87,7 @@ def load_data_full_dataset(batch_size: int):
     testloader = DataLoader(test_ds, batch_size=batch_size)
 
     return trainloader, testloader
+
 
 def load_data(partition_id: int, num_partitions: int, batch_size: int):
 
