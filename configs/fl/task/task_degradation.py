@@ -1,4 +1,4 @@
-# lr = 0.01, batch_size = 32, epochs = 3
+# lr = 0.001, batch_size = 32, epochs = 1, budget_comm = 17000
 from collections import OrderedDict
 import torch
 import torch.nn as nn
@@ -95,7 +95,7 @@ def load_data(partition_id: int, num_partitions: int, batch_size: int):
     new_client_id = 4
 
     # Downsampling limits for _____ clients
-    max_train_samples = 200
+    max_train_samples = 300
     max_test_samples = 50
 
     # ----- Select FederatedDataset depending on client type -----
