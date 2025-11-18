@@ -59,20 +59,20 @@ To start an FL pipeline, send a POST request to `http://161.53.133.104:80/group-
 
 ```
 {
-  "epochs": 1,
-  "localRounds": 2,
-  "trainingParams": {
-    "batchSize": 32,
-    "learningRate": 0.001
-  },
-  "configurationModel": "minCommCost",
-  "modelSize": 3.3,
-  "costSource": "COMMUNICATION",
-  "costConfiguration": {
-    "costType": "totalBudget",
-    "budget": 17000
-  },
-  "rvaEnabled": true
+    "epochs": 1,
+    "localRounds": 2,
+    "trainingParams": {
+        "batchSize": 32,
+        "learningRate": 0.001
+    },
+    "configurationModel": "minCommCost",
+    "modelSize": 3.3,
+    "costSource": "COMMUNICATION",
+    "costConfiguration": {
+        "costType": "totalBudget",
+        "budget": 17000
+    },
+    "rvaEnabled": true
 }
 ```
 
