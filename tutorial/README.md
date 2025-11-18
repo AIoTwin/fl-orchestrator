@@ -112,7 +112,7 @@ Local rounds:  2
 2025-06-11T12:52:59.822+0200 [INFO]  fl-orch: Started global round 1
 ```
 
-Note that local aggregators are deployed before the global aggregator finishes initializing, and clients are deployed after the local aggregators are ready. This ensures that each parent aggregator is fully initialized before its child nodes attempt to connect.
+Note that local aggregators are deployed after the global aggregator finishes initializing, and clients are deployed after the local aggregators are ready, causing time delay. This ensures that each parent aggregator is fully initialized before its child nodes attempt to connect.
 
 Since the FL services are deployed on K3s, check the pods that are running the services (use the group-X for your group, i.e. `group-1`):
 
