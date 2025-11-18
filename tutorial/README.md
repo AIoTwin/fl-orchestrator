@@ -169,51 +169,45 @@ No resources found in group-X group-X.
 
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Once you run the pipeline with default parameters, try pipelines with different HFL parameters (`epochs` and `localRounds`) and training parameters to see their impact on the model performance.
+## Part 2. Modify the task - Performance Improvement
+Modify task.py so that the addition of a new node improves performance. Our suggestion is: 
 
 
+<img src="performance-improvement.png" width="600" height="400">
 
-### Configuring the topology
+
+**note: CIFAR-10 train: 50,000 total, in cluster num_partitions is set to 10 (to make it possible for more nodes to join the pipeline)**
+
+
+### Defining the FL task
+
+Change the task that is run within the pipeline by editing the following file:
+
+``` bash
+nano configs/fl/task/task.py
+```
+**note: you only need to focus on load_data function**
+
+
+### If you’d like to examine the topology, …
 
 The simulated topology is defined in the CSV file with the following columns: <br/>
 `node_id,fl_type,communication_costs,energy_cost,num_partitions,partition_id`. 
 
 FL type can be global aggregator (GA), local aggregator (LA) or client, communication costs are defined towards the possible parent aggregators (from clients to LA's and from LA's to GA), and data distribution is not used in this tutorial.
 
-In the first part of the session, you will just run the preconfigured simulated topology. You can view it with the following command:
+You can view it with the following command:
 ``` bash
 cat configs/cluster/cluster.csv
-``` 
-
-Later, to change and configure a simulated topology of the experiment, edit the following file (you can use `vim` editor if preferred):
-
+```
+Nodes joining the cluster are defined in:
 ``` bash
-nano configs/cluster/cluster.csv
+cat configs/cluster/changes.csv
 ```
 
-(Optional) You can also simulate changes in the topology during runtime. At any moment, delete a node (remove the line) or add a new node to the topology file (`cluster.csv`) and it will automatically trigger the reconfiguration of the environment. Also, after 10 global rounds, the simulation mode appends the content of the `changes.csv` file to `cluster.csv` which introduces a topology change. Currently, it is empty, but you can add nodes in the file and wait to be added during runtime.
-
-### Defining the FL task
-
-The FL task is defined through the Python file `task.py`. First, check the template for defining the task which lists all the methods that have to be implemented:
-
-``` bash
-cat configs/fl/task/task_template.py
-```
-
-In the first part of the session, you will run the pipeline with the preconfigured task. You can view it with the following command:
-``` bash
-cat configs/fl/task/task.py
-``` 
-
-Later, change the task that is run within the pipeline by editing the following file:
-
-``` bash
-nano configs/fl/task/task.py
-```
-
-You can see examples of an FL task training on CIFAR-10 or MNIST datasets in the directory `configs/fl/task/examples`.
-
-
-
-
+### After editing task.py, follow the same steps as in the first part:
+1. Start the orchestrator
+2. Start an FL pipeline (we suggest the same parameters as before)
+3. Monitor progress
+4. Plot accuracy/cost
+5. Remove the pipeline
