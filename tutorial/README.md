@@ -37,7 +37,7 @@ Run all the following commands from that root directory.
 ## Part 1. Running a Default Task - Performance Degradation
 Default setups show performance degradation when a new node is added to the cluster. The topology is illustrated below:
 
-<img src="performance-degradation.png" width="600" height="400">
+<img src="hands_on-task-degradation.drawio (1).png" width="600" height="400">
 
 
 
@@ -173,7 +173,7 @@ No resources found in group-X group-X.
 Modify task.py so that the addition of a new node improves performance. Our suggestion is: 
 
 
-<img src="performance-improvement.png" width="600" height="400">
+<img src="hands_on-task_improvement.drawio (1).png" width="600" height="400">
 
 
 **note: CIFAR-10 train: 50,000 total, in cluster num_partitions is set to 10 (to make it possible for more nodes to join the pipeline)**
